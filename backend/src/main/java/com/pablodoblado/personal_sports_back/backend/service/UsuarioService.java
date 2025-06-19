@@ -22,7 +22,7 @@ public class UsuarioService {
 	public Usuario saveUsuario(Usuario usuario) {
 		
 		if (usuarioRepository.findByEmail(usuario.getEmail()).isPresent()) {
-			throw new IllegalArgumentException("Ya existe un usuario con este correo");
+			throw new IllegalArgumentException("El email ya está registrado");
 		}
 		
 		return usuarioRepository.save(usuario);
@@ -47,6 +47,7 @@ public class UsuarioService {
 	public List<Usuario> findAll() {
 		return usuarioRepository.findAll();
 	}
+	
 	
 	public Usuario updateUsuario(UUID id, Usuario usuario) {
 		//No actualiza la password
