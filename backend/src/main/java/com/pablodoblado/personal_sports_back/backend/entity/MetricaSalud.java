@@ -29,12 +29,18 @@ public class MetricaSalud {
 	@Column(name = "fecha_registro", nullable = false)
 	private LocalDate fechaRegistro;
 	
-	@Column(name = "horas_sueño")
-	private Double horasSueño;
+	@Column(name = "horas_sueno_hours")
+	private Integer horasSuenoHours;
+
+	@Column(name = "horas_sueno_minutes")
+	private Integer horasSuenoMinutes;
 	
-	//Del 0 al 10
+	@Column(name = "peso")
+	private Double peso;
+	
+	
 	@Column(name = "calidad_sueño")
-	private Integer calidadSueño;
+	private String calidadSueño;
 	
 	@Column(name = "hrv_rmssd")
 	private Double hrvRmssd;

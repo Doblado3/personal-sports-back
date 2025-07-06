@@ -37,7 +37,9 @@ public class MetricaSaludService {
 		//Actualizamos el registro si ya existe
 		if(registroExistente.isPresent()) {
 			MetricaSalud copia = registroExistente.get();
-			copia.setHorasSueño(registro.getHorasSueño());
+			copia.setHorasSuenoHours(registro.getHorasSuenoHours());
+			copia.setHorasSuenoMinutes(registro.getHorasSuenoMinutes());
+			copia.setPeso(registro.getPeso());
 			copia.setCalidadSueño(registro.getCalidadSueño());
 			copia.setHrvRmssd(registro.getHrvRmssd());
 			copia.setHrvSdnn(registro.getHrvSdnn());
