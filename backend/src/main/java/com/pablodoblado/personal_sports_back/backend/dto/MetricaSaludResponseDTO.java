@@ -15,7 +15,7 @@ public class MetricaSaludResponseDTO {
     private Integer horasSuenoHours;
     private Integer horasSuenoMinutes;
     private Double peso;
-    private String calidadSueño;
+    private String calidadSueno;
     private Double hrvRmssd;
     private Double hrvSdnn;
     private Integer cardiacaReposo;

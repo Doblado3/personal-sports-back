@@ -40,7 +40,7 @@ public class MetricaSalud {
 	
 	
 	@Column(name = "calidad_sueño")
-	private String calidadSueño;
+	private String calidadSueno;
 	
 	@Column(name = "hrv_rmssd")
 	private Double hrvRmssd;

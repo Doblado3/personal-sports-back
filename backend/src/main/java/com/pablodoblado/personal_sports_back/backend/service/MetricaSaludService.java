@@ -1,17 +1,23 @@
 package com.pablodoblado.personal_sports_back.backend.service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import com.pablodoblado.personal_sports_back.backend.entity.MetricaSalud;
 import com.pablodoblado.personal_sports_back.backend.entity.Usuario;
 import com.pablodoblado.personal_sports_back.backend.repository.MetricaSaludRepository;
 import com.pablodoblado.personal_sports_back.backend.repository.UsuarioRepository;
+
+import jakarta.persistence.criteria.Predicate;
 
 @Service
 public class MetricaSaludService {
@@ -40,7 +46,7 @@ public class MetricaSaludService {
 			copia.setHorasSuenoHours(registro.getHorasSuenoHours());
 			copia.setHorasSuenoMinutes(registro.getHorasSuenoMinutes());
 			copia.setPeso(registro.getPeso());
-			copia.setCalidadSueño(registro.getCalidadSueño());
+			copia.setCalidadSueno(registro.getCalidadSueno());
 			copia.setHrvRmssd(registro.getHrvRmssd());
 			copia.setHrvSdnn(registro.getHrvSdnn());
 			copia.setCardiacaReposo(registro.getCardiacaReposo());
@@ -58,10 +64,6 @@ public class MetricaSaludService {
 		
 	}
 	
-	public Optional<MetricaSalud> getRegistroById(UUID id){
-		return metricaSaludRepository.findById(id);
-	}
-	
 	public Optional<MetricaSalud> getRegistroByUsuarioAndDate(UUID idUsuario, LocalDate fechaRegistro){
 		Usuario usuario = usuarioRepository.findById(idUsuario)
 				.orElseThrow(() -> new IllegalArgumentException("No se ha podido encontrar el usuario con id: " + idUsuario));
@@ -75,6 +77,38 @@ public class MetricaSaludService {
 		
 	}
 	
+	public Page<MetricaSalud> getPaginatedRegistrosForUsuario(UUID idUsuario, Pageable pageable, String filter) {
+		if (filter != null && !filter.trim().isEmpty()) {
+		//Automatizacion por parte de Spring Data
+		Specification<MetricaSalud> spec = (root, query, criteriaBuilder) -> {
+			List<Predicate> predicates = new ArrayList<>();
+			
+			predicates.add(criteriaBuilder.equal(root.get("usuario").get("id"), idUsuario));
+			
+			String lowerCaseFilter = filter.trim().toLowerCase();
+			Predicate filterPredicate = criteriaBuilder.or(
+						
+	                   criteriaBuilder.like(criteriaBuilder.lower(criteriaBuilder.function("STR", String.class, root.get("fechaRegistro"))), "%" + lowerCaseFilter + "%"),                    
+	                   criteriaBuilder.like(criteriaBuilder.lower(root.get("calidadSueno")), "%" + lowerCaseFilter + "%"),	       
+	                   criteriaBuilder.like(criteriaBuilder.lower(criteriaBuilder.function("STR", String.class,root.get("descansoSubjetivo"))), "%" + lowerCaseFilter + "%")
+	                    
+	               );
+	               predicates.add(filterPredicate);
+
+			
+	               return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+		
+			
+			};
+		
+			return metricaSaludRepository.findAll(spec, pageable);
+		
+		} else {
+			
+			return metricaSaludRepository.findByUsuarioId(idUsuario, pageable);
+		}
+	}
+	
 	public List<MetricaSalud> getRegistrosDiariosByUserInRange(UUID idUsuario, LocalDate starDate, LocalDate endDate){
 		Usuario usuario = usuarioRepository.findById(idUsuario)
 				.orElseThrow(() -> new IllegalArgumentException("No se ha podido encontrar el usuario con id: " + idUsuario));
@@ -82,8 +116,9 @@ public class MetricaSaludService {
 		
 	}
 	
-	public void deleteRegistroMetrica(UUID idRegistro) {
-		metricaSaludRepository.deleteById(idRegistro);
+	public void deleteRegistroMetrica(UUID usuarioId, LocalDate fechaRegistro) {
+		//TO-DO: Implementar logica de autenticacion
+		metricaSaludRepository.deleteByFechaRegistro(fechaRegistro);
 	}
 	
 	

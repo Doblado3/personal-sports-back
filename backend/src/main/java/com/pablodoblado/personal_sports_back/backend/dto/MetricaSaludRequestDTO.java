@@ -28,7 +28,7 @@ public class MetricaSaludRequestDTO {
 
 	
 	@NotNull(message = "La calidad del sueño no puede ser nula")
-	private String calidadSueño;
+	private String calidadSueno;
 	
 	private Double hrvRmssd;
     private Double hrvSdnn;
