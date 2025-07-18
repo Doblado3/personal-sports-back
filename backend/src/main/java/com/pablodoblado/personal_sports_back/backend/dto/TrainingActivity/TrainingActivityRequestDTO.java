@@ -1,0 +1,93 @@
+package com.pablodoblado.personal_sports_back.backend.dto.TrainingActivity;
+
+import java.time.OffsetDateTime;
+import java.util.List;
+
+import com.pablodoblado.personal_sports_back.backend.entity.enums.TipoActividad;
+
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@SuperBuilder
+public class TrainingActivityRequestDTO {
+	
+	@NotNull(message = "Debes introducir un nombre para guardar la actividad.")
+	private String nombre;
+	
+	@Min(0)
+	private Double distancia;
+	
+	@NotNull(message = "Debes indicar qué tipo de actividad has realizado.")
+	private TipoActividad tipo;
+	
+	//Comprobar que tiempoActivo <= tiempoTotal en capa servicio
+	@Min(0)
+	private Integer tiempoTotal;
+	
+	@Min(0)
+	private Integer tiempoActivo;
+	
+	private Integer desnivel;
+	
+	private Double maxAltitud;
+	
+	private Double minAltitud;
+	
+	@Max(60)
+	@Min(-20)
+	private Double temperatura;
+	
+	private Double viento;
+	
+	//En porcentaje
+	@Max(100)
+	@Min(0)
+	private Integer humedad;
+	
+	@NotNull(message = "La fecha de comienzo no puede ser nula.")
+	private OffsetDateTime fechaComienzo;
+	
+	//Escala de 0-10
+	@Max(10)
+	@Min(0)
+	private String rpeObjetivo;
+	
+	@Max(10)
+	@Min(0)
+	private String rpeReal;
+	
+	@Min(0)
+	private Double velocidadMedia;
+	
+	@Min(0)
+	private Double velocidadMaxima;
+	
+	private String feedback;
+	
+	@Min(0)
+	private Double calorias;
+	
+	private Double hidratos;
+	
+	private Double litrosAgua;
+	
+	@Min(0)
+	private Integer pulsoMedio;
+	
+	@Min(0)
+	private Integer pulsoMaximo;
+	
+	@Min(0)
+	private Integer pulsoMinimo;
+	
+	private List<VueltaRequestDTO> vueltas;
+
+}
