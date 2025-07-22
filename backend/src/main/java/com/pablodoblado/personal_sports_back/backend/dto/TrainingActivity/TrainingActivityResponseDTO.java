@@ -22,7 +22,7 @@ public class TrainingActivityResponseDTO {
 	private TipoActividad tipo;
 	private Integer tiempoTotal;
 	private Integer tiempoActivo;
-	private Integer desnivel;
+	private Double desnivel;
 	private Double maxAltitud;
 	private Double minAltitud;
 	private Double temperatura;
@@ -35,12 +35,11 @@ public class TrainingActivityResponseDTO {
 	private Double velocidadMedia;
 	private Double velocidadMaxima;
 	private String feedback;
-	private Double calorias;
+	private Double kiloJulios;
 	private Double hidratos;
 	private Double litrosAgua;
-	private Integer pulsoMedio;
-	private Integer pulsoMaximo;
-	private Integer pulsoMinimo;
+	private Double pulsoMedio;
+	private Double pulsoMaximo;
 	private List<VueltaResponseDTO> vueltas;
 	private OffsetDateTime createdAt;
 	private OffsetDateTime updatedAt;

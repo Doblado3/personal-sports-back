@@ -49,7 +49,7 @@ public class TrainingActivity {
 	private Integer tiempoActivo;
 	
 	@Column(name = "desnivel")
-	private Integer desnivel;
+	private Double desnivel;
 	
 	@Column(name = "max_altitud")
 	private Double maxAltitud;
@@ -91,9 +91,6 @@ public class TrainingActivity {
 	@Column(name = "feedback", columnDefinition = "TEXT")
 	private String feedback;
 	
-	@Column(name = "calorias")
-	private Double calorias;
-	
 	@Column(name = "hidratos")
 	private Double hidratos;
 	
@@ -101,16 +98,17 @@ public class TrainingActivity {
 	private Double litrosAgua;
 	
 	@Column(name = "pulso_medio")
-	private Integer pulsoMedio;
+	private Double pulsoMedio;
 	
 	@Column(name = "pulso_maximo")
-	private Integer pulsoMaximo;
+	private Double pulsoMaximo;
 	
-	@Column(name = "pulso_minimo")
-	private Integer pulsoMinimo;
 	
 	@OneToMany(mappedBy="trainingActivity", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<Vuelta> vueltas;
+	
+	@Column(name = "kilo_julios")
+	private Double kiloJulios;
 	
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private LocalDateTime createdAt;

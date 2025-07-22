@@ -13,7 +13,6 @@ public class CyclingActivityResponseDTO extends TrainingActivityResponseDTO {
 	
 	private Boolean potenciometro;
 	private Double cadencia;
-	private Double kiloJulios;
 	private Double vatiosMedios;
 	private Double vatiosMaximos;
 

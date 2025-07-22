@@ -21,8 +21,6 @@ public class CyclingActivityRequestDTO extends TrainingActivityRequestDTO {
 	@Min(0)
 	private Double cadencia;
 	
-	@Min(0)
-	private Double kiloJulios;
 	
 	@Min(0)
 	private Double vatiosMedios;

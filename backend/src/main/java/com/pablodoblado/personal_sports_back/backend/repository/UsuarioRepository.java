@@ -13,5 +13,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
 	
 	//Spring Data adivina la query con el nombre del metodo
 	Optional<Usuario> findByEmail(String email);
+	
+	Optional<Usuario> findByStravaAthleteId(Long stravaId);
 
 }

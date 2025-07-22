@@ -19,8 +19,7 @@ public class VueltaResponseDTO {
 	private OffsetDateTime fechaComienzo;
 	private Integer pulsoMedio;
 	private Integer pulsoMaximo;
-	private Integer pulsoMinimo;
-	private Integer desnivel;
+	private Double desnivel;
 	private Integer numeroVuelta;
 
 }

@@ -18,6 +18,18 @@ public class Usuario {
 	@Column(name = "id")
 	private UUID id;
 	
+	@Column(name = "strava_athlete_id", unique = true)
+	private Long stravaAthleteId;
+	
+	@Column(name = "strava_access_token", length = 512)
+    private String stravaAccessToken;
+
+    @Column(name = "strava_refresh_token", length = 512)
+    private String stravaRefreshToken;
+
+    @Column(name = "strava_token_expires_at") 
+    private Long stravaTokenExpiresAt;
+	
 	@Column(name = "email", unique = true, nullable = false, length = 255)
 	private String email;
 	

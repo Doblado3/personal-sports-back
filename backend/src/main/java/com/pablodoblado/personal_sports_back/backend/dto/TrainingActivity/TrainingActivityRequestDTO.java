@@ -2,6 +2,7 @@ package com.pablodoblado.personal_sports_back.backend.dto.TrainingActivity;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.UUID;
 
 import com.pablodoblado.personal_sports_back.backend.entity.enums.TipoActividad;
 
@@ -22,6 +23,9 @@ public class TrainingActivityRequestDTO {
 	@NotNull(message = "Debes introducir un nombre para guardar la actividad.")
 	private String nombre;
 	
+	@NotNull(message = "El usuario no puede ser nulo")
+	private UUID usuarioId;
+	
 	@Min(0)
 	private Double distancia;
 	
@@ -35,7 +39,7 @@ public class TrainingActivityRequestDTO {
 	@Min(0)
 	private Integer tiempoActivo;
 	
-	private Integer desnivel;
+	private Double desnivel;
 	
 	private Double maxAltitud;
 	
@@ -46,6 +50,8 @@ public class TrainingActivityRequestDTO {
 	private Double temperatura;
 	
 	private Double viento;
+	
+	private Boolean lluvia;
 	
 	//En porcentaje
 	@Max(100)
@@ -73,20 +79,18 @@ public class TrainingActivityRequestDTO {
 	private String feedback;
 	
 	@Min(0)
-	private Double calorias;
+	private Double kiloJulios;
 	
 	private Double hidratos;
 	
 	private Double litrosAgua;
 	
 	@Min(0)
-	private Integer pulsoMedio;
+	private Double pulsoMedio;
 	
 	@Min(0)
-	private Integer pulsoMaximo;
+	private Double pulsoMaximo;
 	
-	@Min(0)
-	private Integer pulsoMinimo;
 	
 	private List<VueltaRequestDTO> vueltas;
 

@@ -30,15 +30,13 @@ public class VueltaRequestDTO {
 	private OffsetDateTime fechaComienzo;
 	
 	@Min(0)
-	private Integer pulsoMedio;
+	private Double pulsoMedio;
 	
 	@Min(0)
-	private Integer pulsoMaximo;
+	private Double pulsoMaximo;
 	
-	@Min(0)
-	private Integer pulsoMinimo;
 	
-	private Integer desnivel;
+	private Double desnivel;
 	
 	@Min(1)
 	private Integer numeroVuelta;

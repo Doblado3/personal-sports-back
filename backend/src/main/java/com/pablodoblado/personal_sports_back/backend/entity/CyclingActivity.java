@@ -25,9 +25,6 @@ public class CyclingActivity extends TrainingActivity {
 	@Column(name = "cadencia")
 	private Double cadencia;
 		
-	@Column(name = "kilo_julios")
-	private Double kiloJulios;
-		
 	@Column(name = "vatios_medios")
 	private Double vatiosMedios;
 		
@@ -35,20 +32,19 @@ public class CyclingActivity extends TrainingActivity {
 	private Double vatiosMaximos;
 	
 	public CyclingActivity(Long id, Usuario usuario, String nombre, Double distancia,
-            TipoActividad tipo, Integer tiempoTotal, Integer tiempoActivo, Integer desnivel, Double maxAltitud,
+            TipoActividad tipo, Integer tiempoTotal, Integer tiempoActivo, Double desnivel, Double maxAltitud,
             Double minAltitud, Double temperatura, Double viento, Integer humedad, Boolean lluvia,
             LocalDateTime fechaComienzo, String rpeObjetivo, String rpeReal, Double velocidadMedia, Double velocidadMaxima, 
-            String feedback, Double calorias, Double hidratos, Double litrosAgua, Integer pulsoMedio, Integer pulsoMaximo, Integer pulsoMinimo, 
-            List<Vuelta> vueltas, LocalDateTime createdAt, LocalDateTime updatedAt, Boolean potenciometro, Double cadencia, Double kiloJulios, 
+            String feedback, Double hidratos, Double litrosAgua, Double pulsoMedio, Double pulsoMaximo, 
+            List<Vuelta> vueltas, Double kiloJulios, LocalDateTime createdAt, LocalDateTime updatedAt, Boolean potenciometro, Double cadencia, 
             Double vatiosMedios, Double vatiosMaximos) {
 
 		super(id, usuario, nombre, distancia, tipo, tiempoTotal, tiempoActivo, desnivel, maxAltitud, minAltitud,
 		      temperatura, viento, humedad, lluvia, fechaComienzo,  rpeObjetivo, rpeReal, velocidadMedia, velocidadMaxima, 
-		      feedback, calorias, hidratos, litrosAgua, pulsoMedio, pulsoMaximo, pulsoMinimo, vueltas, createdAt, updatedAt);
+		      feedback, hidratos, litrosAgua, pulsoMedio, pulsoMaximo, vueltas, kiloJulios, createdAt, updatedAt);
 		
 		this.potenciometro = potenciometro;
 		this.cadencia = cadencia;
-		this.kiloJulios = kiloJulios;
 		this.vatiosMedios = vatiosMedios;
 		this.vatiosMaximos = vatiosMaximos;
 	}

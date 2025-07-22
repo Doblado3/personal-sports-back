@@ -1,13 +1,13 @@
 package com.pablodoblado.personal_sports_back.backend.config;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
 import com.pablodoblado.personal_sports_back.backend.dto.DocumentDTO;
 import com.pablodoblado.personal_sports_back.backend.entity.DocumentEntity;
 
+//Manual Mapping strategy: Mejorable pero funcional
 @Component
 public class DocumentMapper {
 	
