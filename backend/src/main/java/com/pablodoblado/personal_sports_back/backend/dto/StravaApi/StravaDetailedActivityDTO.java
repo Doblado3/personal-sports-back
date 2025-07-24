@@ -1,6 +1,7 @@
 package com.pablodoblado.personal_sports_back.backend.dto.StravaApi;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.pablodoblado.personal_sports_back.backend.entity.enums.TipoActividad;
@@ -73,6 +74,9 @@ public class StravaDetailedActivityDTO {
 	
 	@JsonProperty(value = "device_watts")
 	Boolean potenciometro;
+	
+	@JsonProperty(value = "start_latlng")
+	List<Double> latlng;
 	
 	public Long getAthleteId() {
 		return athlete != null ? athlete.getId(): null;

@@ -33,15 +33,15 @@ public class CyclingActivity extends TrainingActivity {
 	
 	public CyclingActivity(Long id, Usuario usuario, String nombre, Double distancia,
             TipoActividad tipo, Integer tiempoTotal, Integer tiempoActivo, Double desnivel, Double maxAltitud,
-            Double minAltitud, Double temperatura, Double viento, Integer humedad, Boolean lluvia,
+            Double minAltitud, Double temperatura, Double viento, Double humedad, Boolean lluvia,
             LocalDateTime fechaComienzo, String rpeObjetivo, String rpeReal, Double velocidadMedia, Double velocidadMaxima, 
-            String feedback, Double hidratos, Double litrosAgua, Double pulsoMedio, Double pulsoMaximo, 
+            String feedback, Double hidratos, Double litrosAgua, Double pulsoMedio, Double pulsoMaximo, Double startLatlng,
             List<Vuelta> vueltas, Double kiloJulios, LocalDateTime createdAt, LocalDateTime updatedAt, Boolean potenciometro, Double cadencia, 
             Double vatiosMedios, Double vatiosMaximos) {
 
 		super(id, usuario, nombre, distancia, tipo, tiempoTotal, tiempoActivo, desnivel, maxAltitud, minAltitud,
 		      temperatura, viento, humedad, lluvia, fechaComienzo,  rpeObjetivo, rpeReal, velocidadMedia, velocidadMaxima, 
-		      feedback, hidratos, litrosAgua, pulsoMedio, pulsoMaximo, vueltas, kiloJulios, createdAt, updatedAt);
+		      feedback, hidratos, litrosAgua, pulsoMedio, pulsoMaximo, startLatlng, vueltas, kiloJulios, createdAt, updatedAt);
 		
 		this.potenciometro = potenciometro;
 		this.cadencia = cadencia;

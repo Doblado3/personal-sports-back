@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
@@ -40,6 +41,8 @@ public class TrainingActivityService {
 	private final TrainingActivityMapper trainingActivityMapper;
 
 	private final UsuarioRepository usuarioRepository;
+	
+	private final AemetService aemetService;
 
 	@Value("${strava.api.client-id}")
 	private String stravaClientId;
@@ -47,16 +50,14 @@ public class TrainingActivityService {
 	@Value("${strava.api.client-secret}")
 	private String stravaClientSecret;
 
-	@Value("${strava.api.base-url}")
-	private String stravaBaseUrl;
-
 	@Autowired
-	public TrainingActivityService(TrainingActivityRepository trainingActivityRepository, WebClient webClientStrava, TrainingActivityMapper trainingActivityMapper,
-			UsuarioRepository usuarioRepository) {
+	public TrainingActivityService(TrainingActivityRepository trainingActivityRepository, @Qualifier("webClientStrava") WebClient webClientStrava, TrainingActivityMapper trainingActivityMapper,
+			UsuarioRepository usuarioRepository, AemetService aemetService) {
 		this.usuarioRepository = usuarioRepository;
 		this.trainingActivityMapper = trainingActivityMapper;
 		this.trainingActivityRepository = trainingActivityRepository;
 		this.webClientStrava = webClientStrava;
+		this.aemetService = aemetService;
 	}
 
 	/**
@@ -94,7 +95,7 @@ public class TrainingActivityService {
 				throw new RuntimeException("No Strava access token available for user " + usuarioId + ". Please connect to Strava first.");
 			}
 
-			StringBuilder uriBuilder = new StringBuilder(stravaBaseUrl + "/athlete/activities");
+			StringBuilder uriBuilder = new StringBuilder("/athlete/activities"); //el propio webClient ya tiene definida la url base en config
 			uriBuilder.append("?");
 
 			if (before != null) {
@@ -128,7 +129,7 @@ public class TrainingActivityService {
 					throw new RuntimeException("Failed to obtain a valid access token after refresh for user " + usuarioId);
 				}
 				
-				StringBuilder uriBuilder = new StringBuilder(stravaBaseUrl + "/athlete/activities");
+				StringBuilder uriBuilder = new StringBuilder("/athlete/activities");
 				uriBuilder.append("?");
 				
 				if (before != null) uriBuilder.append("before=").append(before).append("&");
@@ -165,6 +166,8 @@ public class TrainingActivityService {
 				.toList();
 
 		if (!CollectionUtils.isEmpty(activitiesToSave)) { 
+			
+			
 			
 		    List<TrainingActivity> saveActivities = trainingActivityRepository.saveAll(activitiesToSave);
 		    log.info("Saved {} new Strava activities for user {}.", saveActivities.size(), usuarioId);
@@ -216,6 +219,16 @@ public class TrainingActivityService {
 		trainingActivity.setKiloJulios(dtoStrava.getKiloJulios());
 		trainingActivity.setPulsoMedio(dtoStrava.getPulsoMedio());
 		trainingActivity.setPulsoMaximo(dtoStrava.getPulsoMaximo());
+		
+		// Las actividades de fuerza no recogen la posicion de partida
+		if (dtoStrava.getLatlng() != null && !dtoStrava.getLatlng().isEmpty()) {
+			trainingActivity.setStartLatlng(dtoStrava.getLatlng().get(0));
+		}
+		
+		trainingActivity = aemetService.getValoresClimatologicosRangoFechas(trainingActivity);
+		
+		
+		
 
 		return trainingActivity;
 	}

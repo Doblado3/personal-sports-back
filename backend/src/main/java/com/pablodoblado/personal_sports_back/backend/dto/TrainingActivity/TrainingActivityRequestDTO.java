@@ -56,7 +56,7 @@ public class TrainingActivityRequestDTO {
 	//En porcentaje
 	@Max(100)
 	@Min(0)
-	private Integer humedad;
+	private Double humedad;
 	
 	@NotNull(message = "La fecha de comienzo no puede ser nula.")
 	private OffsetDateTime fechaComienzo;

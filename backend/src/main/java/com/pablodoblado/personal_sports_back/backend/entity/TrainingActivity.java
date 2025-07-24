@@ -65,7 +65,7 @@ public class TrainingActivity {
 	private Double viento;
 	
 	@Column(name = "humedad")
-	private Integer humedad;
+	private Double humedad;
 	
 	@Column(name = "lluvia")
 	private Boolean lluvia;
@@ -102,6 +102,9 @@ public class TrainingActivity {
 	
 	@Column(name = "pulso_maximo")
 	private Double pulsoMaximo;
+	
+	@Column(name = "start_latlng")
+	private Double startLatlng;
 	
 	
 	@OneToMany(mappedBy="trainingActivity", cascade = CascadeType.ALL, orphanRemoval = true)

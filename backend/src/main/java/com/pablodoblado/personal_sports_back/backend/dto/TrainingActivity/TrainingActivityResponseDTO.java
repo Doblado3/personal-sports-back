@@ -27,7 +27,7 @@ public class TrainingActivityResponseDTO {
 	private Double minAltitud;
 	private Double temperatura;
 	private Double viento;
-	private Integer humedad;
+	private Double humedad;
 	private Boolean lluvia;
 	private OffsetDateTime fechaComienzo;
 	private String rpeObjetivo;
