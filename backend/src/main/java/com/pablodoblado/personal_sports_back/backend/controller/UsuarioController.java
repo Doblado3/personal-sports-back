@@ -36,15 +36,30 @@ public class UsuarioController {
 	}
 	
 	@GetMapping("/findAll")
-	public List<Usuario> findAll(){
-		return usuarioService.findAll();
+	public ResponseEntity<?> findAll() {
+		try {
+			List<Usuario> usuarios = usuarioService.findAll();
+			return new ResponseEntity<>(usuarios, HttpStatus.OK);
+			
+		} catch (IllegalArgumentException e) { 
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+            
+        } catch (Exception e) {
+            
+            return new ResponseEntity<>("Ha ocurrido un error inesperado: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+		
 	}
 	
 	 @GetMapping("/{id}")
 	    public ResponseEntity<?> getUserById(@PathVariable UUID id) {
 	        try {
 	            Usuario usuario = usuarioService.findById(id); 
-	            return new ResponseEntity<>(usuario, HttpStatus.OK); 
+	            if (usuario != null) {
+	                return new ResponseEntity<>(usuario, HttpStatus.OK); 
+	            } else {
+	                return new ResponseEntity<>(HttpStatus.NOT_FOUND); 
+	            }
 	        } catch (IllegalArgumentException e) { 
 	            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
 	        } catch (Exception e) {
