@@ -1,0 +1,29 @@
+[
+  {
+    "fecha": "2025-07-27",
+    "indicativo": "4560Y",
+    "nombre": "ALAJAR",
+    "provincia": "HUELVA",
+    "altitud": "649",
+    "tmed": "15,5",
+    "prec": "0,0",
+    "tmin": "10,0",
+    "horatmin": "05:50",
+    "tmax": "21,0",
+    "horatmax": "14:00",
+    "dir": "30",
+    "velmedia": "10,0",
+    "racha": "20,0",
+    "horaracha": "14:00",
+    "sol": "10,0",
+    "presMax": "950,0",
+    "horaPresMax": "00:00",
+    "presMin": "945,0",
+    "horaPresMin": "14:00",
+    "hrMedia": "80,0",
+    "hrmax": "90,0",
+    "horahrmax": "06:00",
+    "hrmin": "70,0",
+    "horahrmin": "14:00"
+  }
+]

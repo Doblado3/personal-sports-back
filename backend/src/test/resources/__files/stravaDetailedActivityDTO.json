@@ -1,0 +1,36 @@
+[
+    {
+        "id": 1,
+		"athlete": {
+			"id": 74275004
+		},
+        "name": "Morning Run",
+        "distance": 10000,
+        "moving_time": 3600,
+        "elapsed_time": 3660,
+        "total_elevation_gain": 100,
+        "type": "Run",
+        "start_date": "2024-07-28T08:00:00Z",
+        "start_date_local": "2024-07-28T10:00:00Z",
+        "timezone": "(GMT+01:00) Europe/Madrid",
+        "utc_offset": 7200,
+        "location_city": "Madrid",
+        "location_state": "Madrid",
+        "location_country": "Spain",
+        "start_latlng": [40.4168, -3.7038],
+        "end_latlng": [40.4168, -3.7038],
+        "average_speed": 2.77,
+        "max_speed": 3.5,
+        "average_cadence": 90,
+        "average_watts": 200,
+        "max_watts": 400,
+        "weighted_average_watts": 210,
+        "kilojoules": 720,
+        "has_heartrate": true,
+        "average_heartrate": 150,
+        "max_heartrate": 180,
+        "elev_high": 650,
+        "elev_low": 600,
+        "suffer_score": 100
+    }
+]

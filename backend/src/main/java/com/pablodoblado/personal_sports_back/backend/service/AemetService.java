@@ -1,16 +1,19 @@
 package com.pablodoblado.personal_sports_back.backend.service;
 
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -21,7 +24,6 @@ import com.pablodoblado.personal_sports_back.backend.dto.AemetApi.AemetObservati
 import com.pablodoblado.personal_sports_back.backend.dto.AemetApi.AemetValuesDTO;
 import com.pablodoblado.personal_sports_back.backend.entity.TrainingActivity;
 
-import reactor.core.publisher.Mono;
 
 @Service
 public class AemetService {
@@ -34,15 +36,17 @@ public class AemetService {
 	private WebClient webClientAemet;
 	
 	private final ObjectMapper objectMapper;
+	private final ApiRateLimiter apiRateLimiter;
 	
 	
 	@Value("${identificador.estacion.Alajar}")
 	private String identificadorEstacionAlajar;
 	
 	
-	public AemetService(@Qualifier("webClientAemet") WebClient webClient,  ObjectMapper objectMapper) {
+	public AemetService(@Qualifier("webClientAemet") WebClient webClient,  ObjectMapper objectMapper, ApiRateLimiter apiRateLimiter) {
 		this.webClientAemet = webClient;
 		this.objectMapper = objectMapper;
+		this.apiRateLimiter = apiRateLimiter;
 	}
 	
 	/**
@@ -56,11 +60,14 @@ public class AemetService {
      * * */
 	public TrainingActivity getValoresClimatologicosRangoFechas(TrainingActivity trainingActivity) {
 		
+		apiRateLimiter.checkAemetRateLimit();
+		
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'UTC'");
 		String fechaIniStr = trainingActivity.getFechaComienzo().format(formatter);
 		
 		String fechaFinStr = trainingActivity.getFechaComienzo().plusDays(1).format(formatter);
-		// Alajar y Almaden estan bastante proximos, no tiene demasiado sentido diferenciar uno de otro
+		
+		// Alajar y Almaden (estaciones idema) estan bastante proximos, no tiene demasiado sentido diferenciar uno de otro
 		String idema = identificadorEstacionAlajar;
 		
 		
@@ -72,10 +79,10 @@ public class AemetService {
 		
 		try {
 			
-		
+		    
 			if (startTime.isAfter(twelveHoursAgo)) {
 				
-				/*log.info("This Activity has begun before 12 hours from now, calling the values Aemet API endpoint");
+				log.info("This Activity has begun before 12 hours from now, calling the observations Aemet API endpoint");
 				StringBuilder uriBuilder = new StringBuilder("/observacion/convencional/datos");
 				if (idema != null) uriBuilder.append("/estacion/").append(idema);
 				
@@ -86,25 +93,32 @@ public class AemetService {
 						.bodyToMono(AemetInitialResponseDTO.class)
 						.block();
 				
-				AemetValuesDTO valuesMeteo = webClientAemet.get()
+				List<AemetObservationsDTO> valuesMeteo = webClientAemet.get()
 						.uri(initialResponse.getDatos())
 						.retrieve()
-						.bodyToMono(AemetValuesDTO.class)
+						.bodyToMono(new ParameterizedTypeReference<List<AemetObservationsDTO>>() {})
 						.block();
 				
-				if(valuesMeteo != null) {
+				if(valuesMeteo != null && !valuesMeteo.isEmpty()) {
 					
-					trainingActivity.setTemperatura(valuesMeteo.getTmed());
-					trainingActivity.setViento(valuesMeteo.getVelmedia());
-					trainingActivity.setHumedad(valuesMeteo.getHrmedia());
-					trainingActivity.setLluvia(valuesMeteo.getPrec() != 0.0 ? true: false);
-				}*/
+                    AemetObservationsDTO closestObservation = findClosestObservation(valuesMeteo, startTime);
+                    
+                    if (closestObservation != null) {
+                    	
+                        trainingActivity.setTemperatura(closestObservation.getTa());
+                        trainingActivity.setViento(closestObservation.getVv());
+                        trainingActivity.setHumedad(closestObservation.getHr());
+                        trainingActivity.setLluvia(closestObservation.getPrec() != 0.0 ? true: false);
+
+                        
+                    }
+                }
 				
 				
 			} else {
 			
 				// Logica para llamadas historicas (añadir logica try/catch)
-				log.info("Calling the observations Aemet API endpoint");
+				log.info("Calling the values Aemet API endpoint");
 				
 				StringBuilder uriBuilder = new StringBuilder("/valores/climatologicos/diarios/datos");
 				if (fechaIniStr != null) uriBuilder.append("/fechaini/").append(fechaIniStr);
@@ -138,7 +152,7 @@ public class AemetService {
 						// Hay JSONs que no registran ciertos valores, de forma aleatoria
 						// Guardo como null ya que guardar un 0 tendria un significado implicito, que no es correcto
 					    trainingActivity.setHumedad(Optional.ofNullable(datosMeteo.getHrmedia())
-					                                        .map(s -> Double.parseDouble(s))
+					                                        .map(s -> Double.parseDouble(s.replace(',', '.')))
 					                                        .orElse(null)); 
 					    
 					    trainingActivity.setTemperatura(Optional.ofNullable(datosMeteo.getTmed())
@@ -165,11 +179,37 @@ public class AemetService {
 		
 		
 		
+		log.info("Returning trainingActivity: {}", trainingActivity);
 		return trainingActivity;
 				
 		
 		
 		
 	}
+	
+	/**
+	 * Metodo que busca la medida de la API Aemet con la hora mas cercana
+	 * a la hora de comienzo de la actividad de la API Strava
+	 * 
+	 * @param observations: lista con los datos de observacion de las ultimas 12 horas
+	 * @param targetTime: hora de comienzo de la actividad
+	 * 
+	 * @return: instancia AemetObservationsDTO de la que obtendremos los datos meteorologicos
+	 * **/
+    private AemetObservationsDTO findClosestObservation(List<AemetObservationsDTO> observations, Instant targetTime) {
+    	
+        DateTimeFormatter aemetDateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ");
+
+        return observations.stream()
+        		.filter(o -> Objects.nonNull(o.getFint()))
+                .min((o1, o2) -> {
+                    Instant time1 = OffsetDateTime.parse(o1.getFint(), aemetDateTimeFormatter).toInstant();
+                    Instant time2 = OffsetDateTime.parse(o2.getFint(), aemetDateTimeFormatter).toInstant();
+                    long diff1 = Math.abs(ChronoUnit.SECONDS.between(time1, targetTime));
+                    long diff2 = Math.abs(ChronoUnit.SECONDS.between(time2, targetTime));
+                    return Long.compare(diff1, diff2);
+                })
+                .orElse(null);
+    }
 
 }

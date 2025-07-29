@@ -20,19 +20,19 @@ public class AemetObservationsDTO {
 	
 	// Precipitacion acumulada durante los 60 minutos anteriores a fint
 	@JsonProperty(value = "prec")
-	String prec;
+	Double prec;
 	
 	// Velocidad media del viento durante los 60 minutos anteriores a fint
 	@JsonProperty(value = "vv")
-	String vv;
+	Double vv;
 	
 	// Humedad relativa instantánea del aire correspondiente a la fecha dada por fint
 	@JsonProperty(value = "hr")
-	String hr;
+	Double hr;
 	
 	// Temperatura instantánea del aire correspondiente a la fecha data por fint
 	@JsonProperty(value = "ta")
-	String ta;
+	Double ta;
 	
 	
 	

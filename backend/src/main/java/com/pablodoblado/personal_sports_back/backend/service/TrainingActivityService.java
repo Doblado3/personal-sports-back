@@ -43,6 +43,9 @@ public class TrainingActivityService {
 	private final UsuarioRepository usuarioRepository;
 	
 	private final AemetService aemetService;
+	
+	    private final StravaTokenService stravaTokenService;
+    private final ApiRateLimiter ApiRateLimiter;
 
 	@Value("${strava.api.client-id}")
 	private String stravaClientId;
@@ -52,12 +55,16 @@ public class TrainingActivityService {
 
 	@Autowired
 	public TrainingActivityService(TrainingActivityRepository trainingActivityRepository, @Qualifier("webClientStrava") WebClient webClientStrava, TrainingActivityMapper trainingActivityMapper,
-			UsuarioRepository usuarioRepository, AemetService aemetService) {
+			UsuarioRepository usuarioRepository, AemetService aemetService, StravaTokenService stravaTokenService, ApiRateLimiter ApiRateLimiter) {
+		
 		this.usuarioRepository = usuarioRepository;
 		this.trainingActivityMapper = trainingActivityMapper;
 		this.trainingActivityRepository = trainingActivityRepository;
 		this.webClientStrava = webClientStrava;
 		this.aemetService = aemetService;
+		this.stravaTokenService = stravaTokenService;
+        this.ApiRateLimiter = ApiRateLimiter;
+
 	}
 
 	/**
@@ -85,69 +92,67 @@ public class TrainingActivityService {
 		    usuario.getStravaTokenExpiresAt() == null ||
 		    usuario.getStravaTokenExpiresAt() < fiveMinutesFromNow) {
 		    log.info("Proactively refreshing Strava token for user {} as it's expired or near expiration.", usuarioId);
-		    usuario = refreshTokens(usuario); 
+		    usuario = stravaTokenService.refreshToken(usuario); 
 		}
 
+
+		StringBuilder uriBuilder = new StringBuilder("/athlete/activities"); //el propio webClient ya tiene definida la url base en config
+		uriBuilder.append("?");
+
+		if (before != null) {
+			uriBuilder.append("before=").append(before).append("&");
+		}
+
+		if (after != null) {
+			uriBuilder.append("after=").append(after).append("&");
+		}
+
+		uriBuilder.append("page=").append(page != null ? page: 1).append("&");
+		uriBuilder.append("per_page=").append(perPageResults != null ? perPageResults: 30);
+			
 		List<StravaDetailedActivityDTO> listOfActivities;
+			
+		ApiRateLimiter.checkStravaRateLimit();
+
 		try {
+			
 			String currentAccessToken = usuario.getStravaAccessToken();
 			if (currentAccessToken == null || currentAccessToken.isEmpty()) { // Added isEmpty check
 				throw new RuntimeException("No Strava access token available for user " + usuarioId + ". Please connect to Strava first.");
 			}
 
-			StringBuilder uriBuilder = new StringBuilder("/athlete/activities"); //el propio webClient ya tiene definida la url base en config
-			uriBuilder.append("?");
-
-			if (before != null) {
-				uriBuilder.append("before=").append(before).append("&");
-			}
-
-			if (after != null) {
-				uriBuilder.append("after=").append(after).append("&");
-			}
-
-			uriBuilder.append("page=").append(page != null ? page: 1).append("&");
-			uriBuilder.append("per_page=").append(perPageResults != null ? perPageResults: 30);
-
 			listOfActivities = webClientStrava.get()
 					.uri(uriBuilder.toString())
 					.header(HttpHeaders.AUTHORIZATION, "Bearer " + currentAccessToken)
 					.retrieve()
-					.bodyToMono(new ParameterizedTypeReference<List<StravaDetailedActivityDTO>>() {}) //https://docs.spring.io/spring-framework/reference/web/webflux-webclient/client-body.html
+                    .toEntity(new ParameterizedTypeReference<List<StravaDetailedActivityDTO>>() {})
+                    .map(responseEntity -> {
+                        ApiRateLimiter.updateStravaRateLimit(responseEntity.getHeaders());
+                        return responseEntity.getBody();
+                    })
 					.block();
 
 		} catch (WebClientResponseException.Unauthorized e) { // Error encontrado con Postman
-			log.warn("Strava API call failed with 401 UNAUTHORIZED for user {}. Attempting to refresh token and retry.", usuarioId);
 			
-			try {
-				usuario = refreshTokens(usuario); 
-				
-				
-				String refreshedAccessToken = usuario.getStravaAccessToken();
-				
-				if (refreshedAccessToken == null || refreshedAccessToken.isEmpty()) { 
-					throw new RuntimeException("Failed to obtain a valid access token after refresh for user " + usuarioId);
-				}
-				
-				StringBuilder uriBuilder = new StringBuilder("/athlete/activities");
-				uriBuilder.append("?");
-				
-				if (before != null) uriBuilder.append("before=").append(before).append("&");
-				if (after != null) uriBuilder.append("after=").append(after).append("&");
-				uriBuilder.append("page=").append(page != null ? page : 1).append("&");
-				uriBuilder.append("per_page=").append(perPageResults != null ? perPageResults : 30);
-
-				listOfActivities = webClientStrava.get()
-						.uri(uriBuilder.toString())
-						.header(HttpHeaders.AUTHORIZATION, "Bearer " + refreshedAccessToken)
-						.retrieve()
-						.bodyToMono(new ParameterizedTypeReference<List<StravaDetailedActivityDTO>>() {})
-						.block();
-
-			} catch (Exception refreshEx) {
-				log.error("Failed to refresh token or retry API call after 401 for user {}: {}", usuarioId, refreshEx.getMessage());
-				throw new RuntimeException("Error during Strava token refresh or retry for user " + usuarioId, refreshEx);
+			log.warn("Strava API call failed with 401 UNAUTHORIZED for user {}. Attempting to refresh token and retry.", usuarioId);
+			usuario = stravaTokenService.refreshToken(usuario);
+			String refreshedAccessToken = usuario.getStravaAccessToken();
+			
+			if(refreshedAccessToken == null || refreshedAccessToken.isEmpty()) {
+				throw new RuntimeException("Failed to obtain a valid access token after refresh for user: " + usuario.getId());
 			}
+			
+			            listOfActivities = webClientStrava.get()
+                    .uri(uriBuilder.toString())
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer: " + refreshedAccessToken)
+                    .retrieve()
+                    .toEntity(new ParameterizedTypeReference<List<StravaDetailedActivityDTO>>() {})
+                    .map(responseEntity -> {
+                        ApiRateLimiter.updateStravaRateLimit(responseEntity.getHeaders());
+                        return responseEntity.getBody();
+                    })
+                    .block();
+			
 		} catch (Exception e) {
 			log.error("Error fetching Strava activities for user {}: {}", usuarioId, e.getMessage(), e);
 			throw new RuntimeException("Error fetching Strava activities for user " + usuarioId, e);
@@ -233,54 +238,5 @@ public class TrainingActivityService {
 		return trainingActivity;
 	}
 
-	private Usuario refreshTokens(Usuario usuario) {
-
-		// Ahora asumimos que el refresh es necesario
-		
-		if (usuario.getStravaRefreshToken() == null || usuario.getStravaRefreshToken().isEmpty()) {
-			
-		    log.error("Cannot refresh token for user {}: No refresh token found.", usuario.getId());
-		    throw new RuntimeException("No Strava refresh token available for user " + usuario.getId());
-		}
-
-		log.info("Refreshing Strava API credentials for user: {}", usuario.getId());
-
-		try {
-            // Si no usas MultiValueMap salta una excepcion con APPLICATION_FORM_URLENCODED
-            LinkedMultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
-            formData.add("client_id", stravaClientId);
-            formData.add("client_secret", stravaClientSecret);
-            formData.add("refresh_token", usuario.getStravaRefreshToken()); 
-            formData.add("grant_type", "refresh_token");
-
-			String tokenUrl = "https://www.strava.com/oauth/token";
-
-			StravaTokenResponse tokenResponse = webClientStrava.post()
-					.uri(tokenUrl)
-                    .contentType(MediaType.APPLICATION_FORM_URLENCODED) 
-                    .body(BodyInserters.fromFormData(formData)) // No funciona si lo mandas simplemente como valor almacenado en una variable
-					.retrieve()
-					.bodyToMono(StravaTokenResponse.class)
-					.block();
-
-			log.info("Strava API credentials refreshed for user: {}", usuario.getId()); 
-
-			if (tokenResponse != null && tokenResponse.getAccessToken() != null) {
-				
-				usuario.setStravaAccessToken(tokenResponse.getAccessToken());
-				usuario.setStravaRefreshToken(tokenResponse.getRefreshToken());
-				usuario.setStravaTokenExpiresAt(tokenResponse.getExpiresAt());
-
-				usuarioRepository.save(usuario);
-				return usuario;
-
-			}else {
-				throw new RuntimeException("Failed to refresh Strava token for user: " + usuario.getId() + ": Invalid response from Strava.");
-			} 
-
-		}catch (Exception e){
-			log.error("Error refreshing Strava token for user {}: {}", usuario.getId(), e.getMessage(), e);
-			throw new RuntimeException("Failed refreshing Strava token for user: " + usuario.getId(), e);
-		}
-	}
+	
 }

@@ -8,7 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -27,7 +26,10 @@ public class TrainingActivityController {
 		this.trainingActivityService = trainingActivityService;
 	}
 	
-	/** Endpoint method to fetch user strava activities
+	/** 
+	 * Endpoint method to fetch user strava activities
+	 * The method get the activities and saved them to our database for later processing porpuses
+	 * That's way the PostMapping tag instead of a GetMapping one
 	 * */
 	@PostMapping("/fetchStravaActivities/{usuarioId}")
 	public ResponseEntity<?> fetchStravaActivities(@PathVariable  UUID usuarioId, 
