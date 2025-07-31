@@ -1,6 +1,5 @@
 package com.pablodoblado.personal_sports_back.backend.config;
 
-import java.util.Locale;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -9,8 +8,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
+
 
 @Configuration
 public class WebClientConfig {

@@ -16,7 +16,6 @@ import org.springframework.data.jpa.domain.Specification;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
