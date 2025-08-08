@@ -1,4 +1,4 @@
-package com.pablodoblado.personal_sports_back.backend.entity;
+package com.pablodoblado.personal_sports_back.backend.entities;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -8,7 +8,8 @@ import lombok.*;
 
 @Entity
 @Table(name = "users")
-@Data //Lombok genera getters, setters, toString, equals y hashCode
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class Usuario {
@@ -54,7 +55,7 @@ public class Usuario {
 	@Column(name = "updated_at", nullable = false)
 	private LocalDateTime updatedAt;
 	
-	//Llamadas LifeCycle para los TimeStamps
+	
 	@PrePersist
 	protected void onCreate() {
 		this.createdAt = LocalDateTime.now();

@@ -1,20 +1,24 @@
-package com.pablodoblado.personal_sports_back.backend.entity;
+package com.pablodoblado.personal_sports_back.backend.entities;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "vuelta")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Vuelta {
 	
+	// El id de la vuelta se obtiene de Strava
 	@Id
 	@Column(name = "id")
 	private Long id;

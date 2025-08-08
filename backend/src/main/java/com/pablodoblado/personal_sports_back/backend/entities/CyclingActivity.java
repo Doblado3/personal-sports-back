@@ -1,21 +1,23 @@
-package com.pablodoblado.personal_sports_back.backend.entity;
+package com.pablodoblado.personal_sports_back.backend.entities;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-import com.pablodoblado.personal_sports_back.backend.entity.enums.TipoActividad;
+import com.pablodoblado.personal_sports_back.backend.entities.enums.TipoActividad;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
-import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "cyclingactivity")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @SuperBuilder
 @EqualsAndHashCode(callSuper = true)

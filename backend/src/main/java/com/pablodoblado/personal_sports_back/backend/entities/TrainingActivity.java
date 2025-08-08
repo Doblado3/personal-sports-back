@@ -1,27 +1,29 @@
-package com.pablodoblado.personal_sports_back.backend.entity;
+package com.pablodoblado.personal_sports_back.backend.entities;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-import com.pablodoblado.personal_sports_back.backend.entity.enums.TipoActividad;
+import com.pablodoblado.personal_sports_back.backend.entities.enums.TipoActividad;
 
 import jakarta.persistence.*;
 
 @Entity
 @Table(name = "trainingactivity")
 @Inheritance(strategy = InheritanceType.JOINED)
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
 public class TrainingActivity {
 	
-	// No asignamos estrategia de generación ya que lo obtendremos de la API de Strava
+	// El id de la actividad se obtiene del id de Strava
 	@Id
 	@Column(name = "id")
 	private Long id;
@@ -30,11 +32,11 @@ public class TrainingActivity {
 	@JoinColumn(name="id_usuario", nullable = false)
 	private Usuario usuario;
 	
-	//Nombre asociado a la actividad
+	
 	@Column(name = "nombre", nullable = false, length = 255)
 	private String nombre;
 	
-	//Distance of the activity in meters
+	//metros
 	@Column(name = "distancia")
 	private Double distancia;
 	
@@ -42,12 +44,14 @@ public class TrainingActivity {
 	@Enumerated(EnumType.STRING)
 	private TipoActividad tipo;
 	
+	//segundos
 	@Column(name = "tiempo_total")
 	private Integer tiempoTotal;
 	
 	@Column(name = "tiempo_activo")
 	private Integer tiempoActivo;
 	
+	//metros
 	@Column(name = "desnivel")
 	private Double desnivel;
 	
@@ -57,7 +61,7 @@ public class TrainingActivity {
 	@Column(name = "min_altitud")
 	private Double minAltitud;
 	
-	/* Condiciones meteorológicas */
+	
 	@Column(name = "temperatura")
 	private Double temperatura;
 	
@@ -70,7 +74,7 @@ public class TrainingActivity {
 	@Column(name = "lluvia")
 	private Boolean lluvia;
 	
-	//La fecha final se puede obtener con el tiempo de actividad
+	
 	@Column(name = "fecha_comienzo", nullable = false)
 	private LocalDateTime fechaComienzo;
 	
@@ -81,7 +85,7 @@ public class TrainingActivity {
 	@Column(name = "rpe_Real")
 	private String rpeReal;
 	
-	//Ritmo
+	// m/s
 	@Column(name = "velocidad_media")
 	private Double velocidadMedia;
 	

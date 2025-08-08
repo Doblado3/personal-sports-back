@@ -1,4 +1,4 @@
-package com.pablodoblado.personal_sports_back.backend.entity;
+package com.pablodoblado.personal_sports_back.backend.entities;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -7,12 +7,13 @@ import java.util.UUID;
 import jakarta.persistence.*;
 import lombok.*;
 
-//Añadimos una restricción para que un usuario solo añada un registro por día
+
 @Entity
 @Table(name = "metricasalud", uniqueConstraints = {
 		@UniqueConstraint(columnNames = {"id_usuario", "fecha_registro"})
 })
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class MetricaSalud {
