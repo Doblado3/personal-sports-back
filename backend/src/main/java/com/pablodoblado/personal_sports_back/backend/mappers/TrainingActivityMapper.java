@@ -1,4 +1,4 @@
-package com.pablodoblado.personal_sports_back.backend.config;
+package com.pablodoblado.personal_sports_back.backend.mappers;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -9,13 +9,13 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.SubclassMapping;
 
-import com.pablodoblado.personal_sports_back.backend.dto.TrainingActivity.CyclingActivityRequestDTO;
-import com.pablodoblado.personal_sports_back.backend.dto.TrainingActivity.CyclingActivityResponseDTO;
-import com.pablodoblado.personal_sports_back.backend.dto.TrainingActivity.TrainingActivityRequestDTO;
-import com.pablodoblado.personal_sports_back.backend.dto.TrainingActivity.TrainingActivityResponseDTO;
-import com.pablodoblado.personal_sports_back.backend.entity.CyclingActivity;
-import com.pablodoblado.personal_sports_back.backend.entity.TrainingActivity;
-import com.pablodoblado.personal_sports_back.backend.entity.Usuario;
+import com.pablodoblado.personal_sports_back.backend.entities.CyclingActivity;
+import com.pablodoblado.personal_sports_back.backend.entities.TrainingActivity;
+import com.pablodoblado.personal_sports_back.backend.entities.Usuario;
+import com.pablodoblado.personal_sports_back.backend.models.CyclingActivityRequestDTO;
+import com.pablodoblado.personal_sports_back.backend.models.CyclingActivityResponseDTO;
+import com.pablodoblado.personal_sports_back.backend.models.TrainingActivityRequestDTO;
+import com.pablodoblado.personal_sports_back.backend.models.TrainingActivityResponseDTO;
 
 @Mapper(componentModel = "spring")
 public interface TrainingActivityMapper {
