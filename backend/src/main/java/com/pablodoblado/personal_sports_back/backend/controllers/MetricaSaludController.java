@@ -1,41 +1,55 @@
-package com.pablodoblado.personal_sports_back.backend.controller;
+package com.pablodoblado.personal_sports_back.backend.controllers;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.data.crossstore.ChangeSetPersister.NotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import com.pablodoblado.personal_sports_back.backend.dto.MetricaSaludRequestDTO;
-import com.pablodoblado.personal_sports_back.backend.dto.MetricaSaludResponseDTO;
-import com.pablodoblado.personal_sports_back.backend.entity.MetricaSalud;
-import com.pablodoblado.personal_sports_back.backend.service.MetricaSaludService;
+import com.pablodoblado.personal_sports_back.backend.entities.MetricaSalud;
+import com.pablodoblado.personal_sports_back.backend.mappers.MetricaSaludMapper;
+import com.pablodoblado.personal_sports_back.backend.models.MetricaSaludRequestDTO;
+import com.pablodoblado.personal_sports_back.backend.models.MetricaSaludResponseDTO;
+import com.pablodoblado.personal_sports_back.backend.services.MetricaSaludService;
 
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/registroDiario")
-@CrossOrigin(origins = "http://localhost:4200") //Front- end calls
+@RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:4200")
 public class MetricaSaludController {
 	
 	private final MetricaSaludService metricaSaludService;
 	
-	private final ModelMapper modelMapper;
+	private final MetricaSaludMapper metricaSaludMapper;
 	
-	@Autowired
-	public MetricaSaludController(MetricaSaludService metricaSaludService, ModelMapper modelMapper) {
-		this.metricaSaludService = metricaSaludService;
-		this.modelMapper = modelMapper;
-	}
+	public static final String METRICASALUD_PATH = "/api/registroDiario";
+	
+	public static final String METRICASALUD_SAVE_PATH = METRICASALUD_PATH + "/save/{idUsuario}";
+	
+	public static final String METRICASALUD_UPDATE_PATH = METRICASALUD_PATH + "/update/{idUsuario}";
+	
+	public static final String METRICASALUD_ALL_PATH = METRICASALUD_PATH + "/findAll/{idUsuario}";
+
+	public static final String METRICASALUD_ALL_PAGINATED_PATH = METRICASALUD_PATH + "/findAll/paginated/{idUsuario}";
+	
+	public static final String METRICASALUD_ALL_FECHA_RANGE_PATH = METRICASALUD_PATH + "/allByDateRange/{usuarioId}/{fechaInicio}/{fechaFin}";
+	
+	public static final String METRICASALUD_USUARIO_FECHA_PATH = METRICASALUD_PATH + "/findByUsuarioAndFecha/{usuarioId}/{fechaRegistro}";
+	
+	public static final String METRICASALUD_DELETE_PATH = METRICASALUD_PATH + "/delete/{usuarioId}/{fechaRegistro}";
+
 	
 	/**
      * Endpoint to create or update a daily health metric for a specific user.
@@ -45,138 +59,122 @@ public class MetricaSaludController {
      * @param request   The DTO containing the daily health metric data.
      * @return ResponseEntity with the saved/updated metric (as a DTO) or an error message.
      */
-	@PostMapping("/saveOrUpdate/{idUsuario}")
-	public ResponseEntity<?> saveOrUpdate(@PathVariable UUID idUsuario, @Valid @RequestBody MetricaSaludRequestDTO registro){
+	
+	@PostMapping(METRICASALUD_SAVE_PATH)
+	public ResponseEntity<?> saveMetricaDiaria(@PathVariable UUID idUsuario, @Validated @RequestBody MetricaSaludRequestDTO registro){
 		try {
 			
-			MetricaSalud entity = modelMapper.map(registro, MetricaSalud.class);
-			MetricaSalud nuevoRegistro = metricaSaludService.saveOrUpdateMetricaDiaria(idUsuario, entity);
-			MetricaSaludResponseDTO respuesta = modelMapper.map(nuevoRegistro, MetricaSaludResponseDTO.class);
+			MetricaSalud entity = metricaSaludMapper.metricaSaludRequestToMetricaSalud(registro);
+			MetricaSaludResponseDTO nuevoRegistro = metricaSaludService.saveMetricaDiaria(idUsuario, entity);
 			
-			return new ResponseEntity<>(respuesta, HttpStatus.OK);
+			HttpHeaders headers = new HttpHeaders();
+			headers.add("Location", METRICASALUD_PATH + "/findByUsuarioAndFecha/" + idUsuario + "/" + nuevoRegistro.getFechaRegistro().toString());
 			
-		}  catch (IllegalArgumentException e) {
+			return new ResponseEntity<>(headers, HttpStatus.CREATED);
+			
+		}  catch (IllegalStateException e) {
 			
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT); 
             
-        } catch (Exception e) {
-            return new ResponseEntity<>("Ha ocurrido un error inesperado : " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR); 
         }
 	}
 	
-	@GetMapping("/findAll/{idUsuario}")
-	public ResponseEntity<?> findAllRegistrosByUser(@PathVariable UUID idUsuario){
+	@PutMapping(METRICASALUD_UPDATE_PATH)
+	public ResponseEntity<?> updateMetricaSalud(@PathVariable UUID idUsuario, @Valid @RequestBody MetricaSaludRequestDTO registro) throws NotFoundException{
 		
-		try {
-			
-			List<MetricaSalud> registros = metricaSaludService.getAllRegistrosForUsuario(idUsuario);
-			List<MetricaSaludResponseDTO> respuesta = registros.stream()
-					.map(registro -> modelMapper.map(registro, MetricaSaludResponseDTO.class))
-					.collect(Collectors.toList());
-			
-			return new ResponseEntity<>(respuesta, HttpStatus.OK);
-			
-		}  catch (IllegalArgumentException e) {
-			
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT); 
-            
-        } catch (Exception e) {
-            return new ResponseEntity<>("Ha ocurrido un error inesperado : " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR); // Return 500
-        }
+		MetricaSalud entidad = metricaSaludMapper.metricaSaludRequestToMetricaSalud(registro);
+		
+		Optional<MetricaSaludResponseDTO> update = metricaSaludService.updateMetricaSalud(idUsuario, entidad);
+		
+		if(update == null || update.isEmpty()) {
+			throw new NotFoundException();
+		}
+		
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+		
 	}
 	
-	@GetMapping("/findAll/paginated/{idUsuario}")
+	@GetMapping(METRICASALUD_ALL_PATH)
+	public ResponseEntity<?> findAllRegistrosByUser(@PathVariable UUID idUsuario) throws NotFoundException{
+			
+		List<MetricaSaludResponseDTO> respuesta = metricaSaludService.getAllRegistrosForUsuario(idUsuario)
+				.map(registros -> registros.stream()
+						.map(metricaSaludMapper::metricaSaludToMetricaSaludResponseDTO)
+						.collect(Collectors.toList()))
+				.orElseThrow(NotFoundException::new);
+				
+			
+		return new ResponseEntity<>(respuesta, HttpStatus.OK);
+			
+	}
+	
+	@GetMapping(METRICASALUD_ALL_PAGINATED_PATH)
 	public ResponseEntity<Page<MetricaSaludResponseDTO>> findAllPaginatedRegistrosByUser(
 			@PathVariable UUID idUsuario,
 			@PageableDefault(page = 0, size = 10, sort = "fechaRegistro,desc") Pageable pageable,
-			@RequestParam(required = false) String filter){
+			@RequestParam(required = false) String filter) throws Exception {
 		
-		try {
+		
 			
-			Page<MetricaSalud> registros = metricaSaludService.getPaginatedRegistrosForUsuario(idUsuario, pageable, filter);
-			//Spring Data Page ofrece un metodo que se encarga de el mapeo de clases
-			Page<MetricaSaludResponseDTO> respuesta = registros.map(registro ->
-					modelMapper.map(registro, MetricaSaludResponseDTO.class));
+		Page<MetricaSalud> registros = metricaSaludService.getPaginatedRegistrosForUsuario(idUsuario, pageable, filter);
+		
+		if (registros == null || registros.isEmpty()) {
+	        throw new NotFoundException();
+	    }
 			
-			return new ResponseEntity<>(respuesta, HttpStatus.OK);
+		Page<MetricaSaludResponseDTO> respuesta = registros.map(registro ->
 			
-		}  catch (IllegalArgumentException e) {
+				metricaSaludMapper.metricaSaludToMetricaSaludResponseDTO(registro));
 			
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST); 
-            
-        } catch (Exception e) {
-        	
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR); // Return 500
-        }
+		return new ResponseEntity<>(respuesta, HttpStatus.OK);
+			
+		  
 	}
 	
-	@GetMapping("/findByUsuarioAndFecha/{usuarioId}/{fechaRegistro}")
-	public ResponseEntity<?> findByUsuarioAndFechaRegistro(@PathVariable UUID usuarioId, @PathVariable LocalDate fechaRegistro) {
+	@GetMapping(METRICASALUD_USUARIO_FECHA_PATH)
+	public ResponseEntity<?> findByUsuarioAndFechaRegistro(@PathVariable UUID usuarioId, @PathVariable LocalDate fechaRegistro) throws NotFoundException {
 		
-		try {
+		Optional<MetricaSalud> optionalMetrica = metricaSaludService.getRegistroByUsuarioAndDate(usuarioId, fechaRegistro);
+
+	    if (optionalMetrica == null || optionalMetrica.isEmpty()) {
+	        throw new NotFoundException();
+	    }
+	    
+	    MetricaSalud metrica = optionalMetrica.get();
+	    MetricaSaludResponseDTO respuesta = metricaSaludMapper.metricaSaludToMetricaSaludResponseDTO(metrica);
+	        
+	    return new ResponseEntity<>(respuesta, HttpStatus.OK);
 			
-			MetricaSalud registro = metricaSaludService.getRegistroByUsuarioAndDate(usuarioId, fechaRegistro).get();
-			MetricaSaludResponseDTO respuesta = modelMapper.map(registro, MetricaSaludResponseDTO.class);
-			
-			return new ResponseEntity<>(respuesta, HttpStatus.OK);
-			
-		} catch (IllegalArgumentException e) {
-			
-			return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
-			
-		} catch (Exception e) {
-			
-			return new ResponseEntity<>("Ha ocurrido un error inesperado : " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-			
-		}
+		
 		
 		
 	}
 	
-	@GetMapping("/allByDateRange/{usuarioId}/{fechaInicio}/{fechaFin}")
-	public ResponseEntity<?> findAllRegistrosByDateRange(@PathVariable UUID usuarioId, LocalDate fechaInicio, LocalDate fechaFin) {
+	@GetMapping(METRICASALUD_ALL_FECHA_RANGE_PATH)
+	public ResponseEntity<?> findAllRegistrosByDateRange(@PathVariable UUID usuarioId, @PathVariable LocalDate fechaInicio, @PathVariable LocalDate fechaFin) throws NotFoundException {
 		
-		//Comprobar autenticacion del usuario cuando este implementada
+			
+		List<MetricaSaludResponseDTO> respuesta = metricaSaludService.getRegistrosDiariosByUserInRange(usuarioId, fechaInicio, fechaFin)
+				.map(registros -> registros.stream()
+						.map(metricaSaludMapper::metricaSaludToMetricaSaludResponseDTO)
+						.collect(Collectors.toList()))
+				.orElseThrow(NotFoundException::new);
 		
-		try {
 			
-			List<MetricaSalud> registros = metricaSaludService.getRegistrosDiariosByUserInRange(usuarioId, fechaInicio, fechaFin);
-			List<MetricaSaludResponseDTO> respuesta = registros.stream()
-					.map(registro -> modelMapper.map(registro, MetricaSaludResponseDTO.class))
-					.toList();
+		return new ResponseEntity<>(respuesta, HttpStatus.OK);
 			
-			return new ResponseEntity<>(respuesta, HttpStatus.OK);
-			
-		} catch (IllegalArgumentException e) {
-			
-			return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
-			
-		} catch (Exception e) {
-			
-			return new ResponseEntity<>("Ha ocurrido un error inesperado : " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-			
-		}
 	}
 	
-	@DeleteMapping("/delete/{usuarioId}/{fechaRegistro}") 
-	public ResponseEntity<Void> deleteRegistroByDate(@PathVariable UUID usuarioId, @PathVariable LocalDate fechaRegistro){
+	@DeleteMapping(METRICASALUD_DELETE_PATH) 
+	public ResponseEntity<?> deleteRegistroByDate(@PathVariable UUID usuarioId, @PathVariable LocalDate fechaRegistro) throws NotFoundException{
 		
-		//Coger el usuario aquí cuando tenga autenticacion
 		
-		try {
+		if(!metricaSaludService.deleteRegistroMetrica(usuarioId, fechaRegistro)) {
 			
-			metricaSaludService.deleteRegistroMetrica(usuarioId, fechaRegistro);
-			return ResponseEntity.noContent().build(); //204
-			
-		} catch (EmptyResultDataAccessException e) {
-			
-			return ResponseEntity.notFound().build(); //404
-			
-		} catch (Exception e) {
-			
-			System.err.println("Error al eliminar el registro: " + e.getMessage());
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+			throw new NotFoundException();
 		}
+		
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 		
 	}
 

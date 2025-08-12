@@ -16,6 +16,7 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class MetricaSalud {
 	
 	@Id
@@ -40,7 +41,7 @@ public class MetricaSalud {
 	private Double peso;
 	
 	
-	@Column(name = "calidad_sueño")
+	@Column(name = "calidad_sueño", nullable = false)
 	private String calidadSueno;
 	
 	@Column(name = "hrv_rmssd")

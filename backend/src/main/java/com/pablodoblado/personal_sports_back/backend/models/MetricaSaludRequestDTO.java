@@ -1,4 +1,4 @@
-package com.pablodoblado.personal_sports_back.backend.dto;
+package com.pablodoblado.personal_sports_back.backend.models;
 
 import java.time.LocalDate;
 import jakarta.validation.constraints.NotNull;
@@ -8,8 +8,7 @@ import jakarta.validation.constraints.Min;
 import lombok.*;
 
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Builder
 public class MetricaSaludRequestDTO {
 	
 	@NotNull(message = "La fecha de registro no puede ser nula")

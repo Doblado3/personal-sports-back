@@ -1,4 +1,4 @@
-package com.pablodoblado.personal_sports_back.backend.dto;
+package com.pablodoblado.personal_sports_back.backend.models;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -6,8 +6,9 @@ import java.util.UUID;
 import lombok.*;
 
 @Data
-@NoArgsConstructor
+@Builder
 @AllArgsConstructor
+@NoArgsConstructor
 public class MetricaSaludResponseDTO {
 	
 	private UUID usuarioId; 
