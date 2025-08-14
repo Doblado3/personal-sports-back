@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.crossstore.ChangeSetPersister.NotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -35,7 +36,7 @@ public class MetricaSaludServiceImpl implements MetricaSaludService {
 	private final MetricaSaludMapper metricaSaludMapper;
 	
 	@Override
-	public MetricaSaludResponseDTO saveMetricaDiaria(UUID idUsuario, MetricaSalud metricaSalud) {
+	public MetricaSaludResponseDTO saveMetricaDiaria(UUID idUsuario, MetricaSalud metricaSalud) throws NotFoundException {
 		
 		Usuario usuario = searchForUser(idUsuario);
 		
@@ -52,11 +53,11 @@ public class MetricaSaludServiceImpl implements MetricaSaludService {
 	}
 	
 	@Override
-	public Optional<MetricaSaludResponseDTO> updateMetricaSalud(UUID idUsuario, MetricaSalud metricaSalud){
+	public Optional<MetricaSaludResponseDTO> updateMetricaSalud(UUID idUsuario, MetricaSalud metricaSalud) throws NotFoundException{
 		
 		Usuario usuario = searchForUser(idUsuario);
 		
-		return metricaSaludRepository.findByFechaRegistro(metricaSalud.getFechaRegistro())
+		return metricaSaludRepository.findByUsuarioAndFechaRegistro(usuario, metricaSalud.getFechaRegistro())
 				.map(copia -> {
 					
 					copia.setUsuario(usuario);
@@ -81,7 +82,7 @@ public class MetricaSaludServiceImpl implements MetricaSaludService {
 	
 	
 	@Override
-	public Optional<MetricaSalud> getRegistroByUsuarioAndDate(UUID idUsuario, LocalDate fechaRegistro){
+	public Optional<MetricaSalud> getRegistroByUsuarioAndDate(UUID idUsuario, LocalDate fechaRegistro) throws NotFoundException{
 		
 		Usuario usuario = searchForUser(idUsuario);
 		
@@ -89,7 +90,7 @@ public class MetricaSaludServiceImpl implements MetricaSaludService {
 	}
 	
 	@Override
-	public Optional<List<MetricaSalud>> getAllRegistrosForUsuario(UUID idUsuario){
+	public Optional<List<MetricaSalud>> getAllRegistrosForUsuario(UUID idUsuario) throws NotFoundException{
 		
 		Usuario usuario = searchForUser(idUsuario);
 		
@@ -136,7 +137,7 @@ public class MetricaSaludServiceImpl implements MetricaSaludService {
 	}
 	
 	@Override
-	public Optional<List<MetricaSalud>> getRegistrosDiariosByUserInRange(UUID idUsuario, LocalDate starDate, LocalDate endDate){
+	public Optional<List<MetricaSalud>> getRegistrosDiariosByUserInRange(UUID idUsuario, LocalDate starDate, LocalDate endDate) throws NotFoundException{
 		
 		Usuario usuario = searchForUser(idUsuario);
 		
@@ -145,26 +146,23 @@ public class MetricaSaludServiceImpl implements MetricaSaludService {
 	}
 	
 	@Override
-	public Boolean deleteRegistroMetrica(UUID usuarioId, LocalDate fechaRegistro) {
+	public Boolean deleteRegistroMetrica(UUID usuarioId, LocalDate fechaRegistro) throws NotFoundException {
 		
 		Usuario usuario = searchForUser(usuarioId);
 
-		if(metricaSaludRepository.findByUsuarioAndFechaRegistro(usuario, fechaRegistro).isPresent()) {
-			
-			metricaSaludRepository.deleteByFechaRegistro(fechaRegistro);
+		Optional<MetricaSalud> metricaOpt = metricaSaludRepository.findByUsuarioAndFechaRegistro(usuario, fechaRegistro);
+		if(metricaOpt.isPresent()) {
+			metricaSaludRepository.delete(metricaOpt.get());
 			return true;
-			
 		}
 		
 		return false;
-
-		
 	}
 	
-	private Usuario searchForUser(UUID idUsuario) {
+	private Usuario searchForUser(UUID idUsuario) throws NotFoundException {
 		
 		return usuarioRepository.findById(idUsuario)
-				.orElseThrow(() -> new IllegalArgumentException("No se ha podido encontrar el usuario con id: " + idUsuario));
+				.orElseThrow(() -> new NotFoundException());
 		
 	}
 	

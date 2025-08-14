@@ -58,10 +58,11 @@ public class MetricaSaludController {
      * @param idUsuario The UUID of the user.
      * @param request   The DTO containing the daily health metric data.
      * @return ResponseEntity with the saved/updated metric (as a DTO) or an error message.
+	 * @throws NotFoundException 
      */
 	
 	@PostMapping(METRICASALUD_SAVE_PATH)
-	public ResponseEntity<?> saveMetricaDiaria(@PathVariable UUID idUsuario, @Validated @RequestBody MetricaSaludRequestDTO registro){
+	public ResponseEntity<?> saveMetricaDiaria(@PathVariable UUID idUsuario, @Validated @RequestBody MetricaSaludRequestDTO registro) throws NotFoundException{
 		try {
 			
 			MetricaSalud entity = metricaSaludMapper.metricaSaludRequestToMetricaSalud(registro);
