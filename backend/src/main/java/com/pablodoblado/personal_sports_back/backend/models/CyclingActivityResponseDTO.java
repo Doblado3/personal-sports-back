@@ -1,4 +1,4 @@
-package com.pablodoblado.personal_sports_back.backend.dto.TrainingActivity;
+package com.pablodoblado.personal_sports_back.backend.models;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;

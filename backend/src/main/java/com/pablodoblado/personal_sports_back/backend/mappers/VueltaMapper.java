@@ -8,19 +8,18 @@ import com.pablodoblado.personal_sports_back.backend.entities.Vuelta;
 import com.pablodoblado.personal_sports_back.backend.models.VueltaRequestDTO;
 import com.pablodoblado.personal_sports_back.backend.models.VueltaResponseDTO;
 
-@Mapper(uses = {DateMapper.class})
+@Mapper(uses = {DateMapper.class}, componentModel = "spring")
 public interface VueltaMapper {
 	
 	@Mapping(target = "id", ignore = true)
-    @Mapping(target = "trainingActivity", expression = "java(mapTrainingActivityIdToTrainingActivity(dto.getTrainingActivityId()))")
+    @Mapping(target = "trainingActivity", expression = "java(mapTrainingActivityIdToTrainingActivity(dto.getTrainingActivity()))")
     Vuelta mapRequestToEntity(VueltaRequestDTO dto);
 
     
     @Mapping(target = "trainingActivityId", source = "trainingActivity.id")
     VueltaResponseDTO mapEntityToResponse(Vuelta entity);
 
-    // This is a helper method to create a `TrainingActivity` entity from just its ID.
-    // MapStruct will automatically use this method when needed.
+    
     default TrainingActivity mapTrainingActivityIdToTrainingActivity(Long activityId) {
         if (activityId == null) {
             return null;
