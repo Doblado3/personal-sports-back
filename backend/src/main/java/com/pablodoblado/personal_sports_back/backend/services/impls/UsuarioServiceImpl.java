@@ -1,24 +1,31 @@
-package com.pablodoblado.personal_sports_back.backend.service;
+package com.pablodoblado.personal_sports_back.backend.services.impls;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
-import com.pablodoblado.personal_sports_back.backend.entity.Usuario;
-import com.pablodoblado.personal_sports_back.backend.repository.UsuarioRepository;
+import com.pablodoblado.personal_sports_back.backend.entities.Usuario;
+import com.pablodoblado.personal_sports_back.backend.mappers.UsuarioMapper;
+import com.pablodoblado.personal_sports_back.backend.models.UsuarioResponseDTO;
+import com.pablodoblado.personal_sports_back.backend.repositories.UsuarioRepository;
+import com.pablodoblado.personal_sports_back.backend.services.UsuarioService;
+
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
-public class UsuarioService {
+@AllArgsConstructor
+@Slf4j
+public class UsuarioServiceImpl implements UsuarioService {
 	
 	private final UsuarioRepository usuarioRepository;
 	
-	//Usamos la inyeccion de dependencias mediante constructores
-	public UsuarioService(UsuarioRepository usuarioRepository) {
-		this.usuarioRepository = usuarioRepository;
-	}
+	private final UsuarioMapper usuarioMapper;
 	
+	@Override
 	public Usuario saveUsuario(Usuario usuario) {
 		
 		if (usuarioRepository.findByEmail(usuario.getEmail()).isPresent()) {
@@ -29,39 +36,57 @@ public class UsuarioService {
 		
 	}
 	
+	@Override
 	public Optional<Usuario> findUsuarioByEmail(String email){
 		return usuarioRepository.findByEmail(email);
 	}
 	
-	public Usuario findById(UUID id) {
-		Optional<Usuario> usuario = usuarioRepository.findById(id);
-		
-		if(usuario.isEmpty()) {
-			throw new RuntimeException("El usuario no existe");
-		}
-		
-		return usuario.get();
-		
-	}
 	
-	public List<Usuario> findAll() {
-		return usuarioRepository.findAll();
+	@Override
+	public List<UsuarioResponseDTO> findAll() {
+		
+		List<Usuario> usuarios = usuarioRepository.findAll();
+		
+		return usuarioRepository.findAll()
+				.stream()
+				.map(usuarioMapper::usuarioToUsuarioResponseDTO)
+				.collect(Collectors.toList());
 	}
 	
 	
-	public Usuario updateUsuario(UUID id, Usuario usuario) {
-		//No actualiza la password
-        return usuarioRepository.findById(id).map(user -> {
-        	user.setNombre(usuario.getNombre());
-        	user.setApellidos(usuario.getApellidos());
-        	user.setFechaNacimiento(usuario.getFechaNacimiento());
-        	user.setGenero(usuario.getGenero());
-            return usuarioRepository.save(user);
-        }).orElseThrow(() -> new IllegalArgumentException("El usuario con id: " + id + " no existe"));
+	@Override
+	public Optional<UsuarioResponseDTO> updateUsuario(UUID id, Usuario usuario) {
+		
+		return usuarioRepository.findById(id)
+				.map(user -> {
+					user.setNombre(usuario.getNombre());
+					user.setApellidos(usuario.getApellidos());
+					user.setEmail(usuario.getEmail());
+					user.setFechaNacimiento(usuario.getFechaNacimiento());
+					user.setGenero(usuario.getGenero());
+					user.setPassword(usuario.getPassword());
+					log.info("Updating existing user with id: " + user.getId());
+					return usuarioMapper.usuarioToUsuarioResponseDTO(usuarioRepository.save(user));
+				});
     }
 	
-	public void deleteUsuario(Usuario usuario) {
-		usuarioRepository.delete(usuario);
+	@Override
+	public Boolean deleteUsuarioById(UUID usuarioId) {
+		
+		if(usuarioRepository.existsById(usuarioId)) {
+			
+			usuarioRepository.deleteById(usuarioId);
+			return true;
+		}
+		
+		return false;
+	}
+
+	@Override
+	public Optional<UsuarioResponseDTO> findById(UUID usuarioId) {
+		
+		return Optional.ofNullable(usuarioMapper.usuarioToUsuarioResponseDTO(usuarioRepository.findById(usuarioId)
+				.orElse(null)));
 	}
 
 }

@@ -1,92 +1,106 @@
-package com.pablodoblado.personal_sports_back.backend.controller;
+package com.pablodoblado.personal_sports_back.backend.controllers;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.crossstore.ChangeSetPersister.NotFoundException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import com.pablodoblado.personal_sports_back.backend.entity.Usuario;
-import com.pablodoblado.personal_sports_back.backend.service.UsuarioService;
+import com.pablodoblado.personal_sports_back.backend.entities.Usuario;
+import com.pablodoblado.personal_sports_back.backend.mappers.UsuarioMapper;
+import com.pablodoblado.personal_sports_back.backend.models.UsuarioRequestDTO;
+import com.pablodoblado.personal_sports_back.backend.models.UsuarioResponseDTO;
+import com.pablodoblado.personal_sports_back.backend.services.UsuarioService;
+
+import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/usuario")
+@RequiredArgsConstructor
 public class UsuarioController {
 	
 	private final UsuarioService usuarioService;
 	
-	public UsuarioController(UsuarioService usuarioService) {
-		this.usuarioService = usuarioService;
-	}
+	private final UsuarioMapper usuarioMapper;
 	
-	@PostMapping("/save")
-	public ResponseEntity<?> save(@RequestBody Usuario usuario) {
-		try {
-			Usuario nuevoUsuario = usuarioService.saveUsuario(usuario);
-			return new ResponseEntity<>(nuevoUsuario, HttpStatus.OK);
-		} catch (IllegalArgumentException e) {
-			
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT); 
-            
-        } catch (Exception e) {
-            return new ResponseEntity<>("Ha ocurrido un error inesperado : " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR); // Return 500
-        }
+	public static final String USUARIO_PATH = "/api/usuario";
+	
+	public static final String USUARIO_SAVE_PATH = USUARIO_PATH + "/save";
+	
+	public static final String USUARIO_ALL_PATH = USUARIO_PATH + "/findAll";
+	
+	public static final String USUARIO_BY_ID_PATH = USUARIO_PATH + "/{id}";
+	
+	public static final String USUARIO_UPDATE_PATH = USUARIO_PATH + "/update/{id}";
+	
+	public static final String USUARIO_DELETE_PATH = USUARIO_PATH + "/delete/{id}";
+	
+	
+	
+	
+	@PostMapping(USUARIO_SAVE_PATH)
+	public ResponseEntity<?> save(@Validated @RequestBody UsuarioRequestDTO usuario) {
+		
+		Usuario usuarioEntity = usuarioMapper.usuarioRequestDTOtoUsuario(usuario);
+		Usuario nuevoUsuario = usuarioService.saveUsuario(usuarioEntity);
+		
+		
+		HttpHeaders headers = new HttpHeaders();
+		headers.add("Location", USUARIO_PATH + "/" + nuevoUsuario.getId().toString());
+		
+		return new ResponseEntity(headers, HttpStatus.CREATED);
+		
 		
 	}
 	
-	@GetMapping("/findAll")
+	@GetMapping(USUARIO_ALL_PATH)
 	public ResponseEntity<?> findAll() {
-		try {
-			List<Usuario> usuarios = usuarioService.findAll();
-			return new ResponseEntity<>(usuarios, HttpStatus.OK);
+		
+		List<UsuarioResponseDTO> usuarios = usuarioService.findAll();
+		return new ResponseEntity<>(usuarios, HttpStatus.OK);
 			
-		} catch (IllegalArgumentException e) { 
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-            
-        } catch (Exception e) {
-            
-            return new ResponseEntity<>("Ha ocurrido un error inesperado: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+		
 		
 	}
 	
-	 @GetMapping("/{id}")
-	    public ResponseEntity<?> getUserById(@PathVariable UUID id) {
-	        try {
-	            Usuario usuario = usuarioService.findById(id); 
-	            if (usuario != null) {
-	                return new ResponseEntity<>(usuario, HttpStatus.OK); 
-	            } else {
-	                return new ResponseEntity<>(HttpStatus.NOT_FOUND); 
-	            }
-	        } catch (IllegalArgumentException e) { 
-	            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-	        } catch (Exception e) {
-	            
-	            return new ResponseEntity<>("Ha ocurrido un error inesperado: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-	        }
+	@GetMapping(USUARIO_BY_ID_PATH)
+	public ResponseEntity<?> getUserById(@PathVariable UUID id) throws NotFoundException {
+		 
+		UsuarioResponseDTO usuario = usuarioService.findById(id).orElseThrow(NotFoundException::new);
+	    return new ResponseEntity(usuario, HttpStatus.OK);
+	        
 	    }
 	
-	@PutMapping("/update/{id}")
-	public ResponseEntity<?> update(@PathVariable UUID id,@RequestBody Usuario usuario) {
-		try {
-			
-			Usuario usuarioActualizado = usuarioService.updateUsuario(id, usuario);
-			return new ResponseEntity<>(usuarioActualizado, HttpStatus.OK);
-			
-		} catch(IllegalArgumentException e) {
-			return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-			
-		} catch(Exception e) {
-			return new ResponseEntity<>("Error inesperado: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+	@PutMapping(USUARIO_UPDATE_PATH)
+	public ResponseEntity<?> updateUsuarioById(@PathVariable UUID id, @Validated @RequestBody UsuarioRequestDTO usuario) throws NotFoundException {
+		
+		Usuario entidad = usuarioMapper.usuarioRequestDTOtoUsuario(usuario);
+		
+		Optional<UsuarioResponseDTO> respuesta = usuarioService.updateUsuario(id, entidad);
+		
+		if(respuesta == null || respuesta.isEmpty()) {
+			throw new NotFoundException();
 		}
+		
+		return new ResponseEntity<>(respuesta, HttpStatus.NO_CONTENT);
+			
+		
 		
 	}
 	
-	@DeleteMapping("/delete")
-	public void delete(@RequestBody Usuario usuario) {
-		usuarioService.deleteUsuario(usuario);
+	@DeleteMapping(USUARIO_DELETE_PATH)
+	public ResponseEntity delete(@PathVariable UUID id) throws NotFoundException {
+		
+		if(!usuarioService.deleteUsuarioById(id)) {
+			
+			throw new NotFoundException();
+		}
+		
+		return new ResponseEntity(HttpStatus.NO_CONTENT);
 		
 	}
 	

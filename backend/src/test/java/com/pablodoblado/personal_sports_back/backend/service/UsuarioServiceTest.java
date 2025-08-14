@@ -13,17 +13,18 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.pablodoblado.personal_sports_back.backend.entity.Usuario;
-import com.pablodoblado.personal_sports_back.backend.repository.UsuarioRepository;
+import com.pablodoblado.personal_sports_back.backend.entities.Usuario;
+import com.pablodoblado.personal_sports_back.backend.repositories.UsuarioRepository;
+import com.pablodoblado.personal_sports_back.backend.services.impls.UsuarioServiceImpl;
 
 @ExtendWith(MockitoExtension.class)
 public class UsuarioServiceTest {
 	
-	@Mock //Hace un repositorio naive, para no tocar la base de datos
+	@Mock 
 	private UsuarioRepository usuarioRepository;
 	
-	@InjectMocks //Inyecta el repositorio creado a nuestro servicio
-	private UsuarioService usuarioService;
+	@InjectMocks
+	private UsuarioServiceImpl usuarioService;
 	
 	private Usuario usuarioAntiguo;
 	private Usuario nuevoUsuario;

@@ -6,7 +6,7 @@ import com.pablodoblado.personal_sports_back.backend.entities.Usuario;
 import com.pablodoblado.personal_sports_back.backend.models.UsuarioRequestDTO;
 import com.pablodoblado.personal_sports_back.backend.models.UsuarioResponseDTO;
 
-@Mapper
+@Mapper(componentModel = "spring")
 public interface UsuarioMapper {
 	
 	Usuario usuarioRequestDTOtoUsuario(UsuarioRequestDTO usuarioRequestDTO);
