@@ -1,12 +1,12 @@
 package com.pablodoblado.personal_sports_back.backend.controller;
 
-import com.pablodoblado.personal_sports_back.backend.controllers.TrainingActivityController;
-import com.pablodoblado.personal_sports_back.backend.services.impls.TrainingActivityServiceImpl;
+import com.pablodoblado.personal_sports_back.backend.controllers.StravaActivityController;
+import com.pablodoblado.personal_sports_back.backend.services.impls.StravaActivityServiceImpl;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
 
@@ -15,14 +15,14 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-@WebFluxTest(TrainingActivityController.class)
-public class TrainingActivityControllerTest {
+@WebFluxTest(StravaActivityController.class)
+public class StravaActivityControllerTest {
 
     @Autowired
     private WebTestClient webTestClient;
 
-    @MockBean
-    private TrainingActivityServiceImpl trainingActivityService;
+    @MockitoBean
+    private StravaActivityServiceImpl trainingActivityService;
 
     @Test
     public void shouldAcknowledgeRequestAndProcessInBackground() {

@@ -8,7 +8,7 @@ import com.pablodoblado.personal_sports_back.backend.repositories.UsuarioReposit
 import com.pablodoblado.personal_sports_back.backend.services.impls.AemetService;
 import com.pablodoblado.personal_sports_back.backend.services.impls.ApiRateLimiterService;
 import com.pablodoblado.personal_sports_back.backend.services.impls.StravaTokenService;
-import com.pablodoblado.personal_sports_back.backend.services.impls.TrainingActivityServiceImpl;
+import com.pablodoblado.personal_sports_back.backend.services.impls.StravaActivityServiceImpl;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,10 +40,10 @@ import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @WireMockTest(httpPort = 8089)
-public class TrainingActivityServiceTest {
+public class StravaActivityServiceTest {
 
     @Autowired
-    private TrainingActivityServiceImpl trainingActivityService;
+    private StravaActivityServiceImpl trainingActivityService;
 
     @MockitoBean
     private UsuarioRepository usuarioRepository;
