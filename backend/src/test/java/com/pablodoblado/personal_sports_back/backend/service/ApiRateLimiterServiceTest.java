@@ -2,6 +2,9 @@ package com.pablodoblado.personal_sports_back.backend.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import com.pablodoblado.personal_sports_back.backend.services.impls.ApiRateLimiterService;
+
 import reactor.test.StepVerifier;
 
 import java.lang.reflect.Field;

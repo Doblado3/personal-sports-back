@@ -1,10 +1,10 @@
-package com.pablodoblado.personal_sports_back.backend.dto.TrainingActivity;
+package com.pablodoblado.personal_sports_back.backend.models;
 
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import com.pablodoblado.personal_sports_back.backend.entity.enums.TipoActividad;
+import com.pablodoblado.personal_sports_back.backend.entities.enums.TipoActividad;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;

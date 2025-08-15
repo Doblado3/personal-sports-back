@@ -1,7 +1,5 @@
 package com.pablodoblado.personal_sports_back.backend.repository;
 
-import com.pablodoblado.personal_sports_back.backend.entity.MetricaSalud;
-import com.pablodoblado.personal_sports_back.backend.entity.Usuario;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +10,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+
+import com.pablodoblado.personal_sports_back.backend.entities.MetricaSalud;
+import com.pablodoblado.personal_sports_back.backend.entities.Usuario;
+import com.pablodoblado.personal_sports_back.backend.repositories.MetricaSaludRepository;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;

@@ -1,4 +1,4 @@
-package com.pablodoblado.personal_sports_back.backend.service;
+package com.pablodoblado.personal_sports_back.backend.services.impls;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -21,11 +21,11 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.pablodoblado.personal_sports_back.backend.entity.DocumentEntity;
-import com.pablodoblado.personal_sports_back.backend.entity.DocumentVectorStoreEntity;
-import com.pablodoblado.personal_sports_back.backend.entity.DocumentVectorStoreId;
-import com.pablodoblado.personal_sports_back.backend.repository.DocumentRepository;
-import com.pablodoblado.personal_sports_back.backend.repository.DocumentVectorStoreRepository;
+import com.pablodoblado.personal_sports_back.backend.entities.DocumentEntity;
+import com.pablodoblado.personal_sports_back.backend.entities.DocumentVectorStoreEntity;
+import com.pablodoblado.personal_sports_back.backend.entities.DocumentVectorStoreId;
+import com.pablodoblado.personal_sports_back.backend.repositories.DocumentRepository;
+import com.pablodoblado.personal_sports_back.backend.repositories.DocumentVectorStoreRepository;
 
 import jakarta.annotation.PostConstruct;
 

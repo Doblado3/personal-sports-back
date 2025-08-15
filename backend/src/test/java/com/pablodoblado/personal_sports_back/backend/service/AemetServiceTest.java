@@ -2,9 +2,12 @@ package com.pablodoblado.personal_sports_back.backend.service;
 
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
-import com.pablodoblado.personal_sports_back.backend.entity.TrainingActivity;
-import com.pablodoblado.personal_sports_back.backend.entity.Usuario;
-import com.pablodoblado.personal_sports_back.backend.entity.enums.TipoActividad;
+import com.pablodoblado.personal_sports_back.backend.entities.TrainingActivity;
+import com.pablodoblado.personal_sports_back.backend.entities.Usuario;
+import com.pablodoblado.personal_sports_back.backend.entities.enums.TipoActividad;
+import com.pablodoblado.personal_sports_back.backend.services.impls.AemetService;
+import com.pablodoblado.personal_sports_back.backend.services.impls.ApiRateLimiterService;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

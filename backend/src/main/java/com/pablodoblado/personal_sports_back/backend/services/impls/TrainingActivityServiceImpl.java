@@ -1,18 +1,19 @@
-package com.pablodoblado.personal_sports_back.backend.service;
+package com.pablodoblado.personal_sports_back.backend.services.impls;
 
-import com.pablodoblado.personal_sports_back.backend.config.TrainingActivityMapper;
-import com.pablodoblado.personal_sports_back.backend.dto.StravaApi.StravaDetailedActivityDTO;
-import com.pablodoblado.personal_sports_back.backend.entity.CyclingActivity;
-import com.pablodoblado.personal_sports_back.backend.entity.TrainingActivity;
-import com.pablodoblado.personal_sports_back.backend.entity.Usuario;
-import com.pablodoblado.personal_sports_back.backend.entity.enums.TipoActividad;
-import com.pablodoblado.personal_sports_back.backend.repository.TrainingActivityRepository;
-import com.pablodoblado.personal_sports_back.backend.repository.UsuarioRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.pablodoblado.personal_sports_back.backend.entities.CyclingActivity;
+import com.pablodoblado.personal_sports_back.backend.entities.TrainingActivity;
+import com.pablodoblado.personal_sports_back.backend.entities.Usuario;
+import com.pablodoblado.personal_sports_back.backend.entities.enums.TipoActividad;
+import com.pablodoblado.personal_sports_back.backend.mappers.TrainingActivityMapper;
+import com.pablodoblado.personal_sports_back.backend.models.StravaDetailedActivityDTO;
+import com.pablodoblado.personal_sports_back.backend.repositories.TrainingActivityRepository;
+import com.pablodoblado.personal_sports_back.backend.repositories.UsuarioRepository;
+import com.pablodoblado.personal_sports_back.backend.services.TrainingActivityService;
+
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
@@ -23,33 +24,32 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
 @Service
-public class TrainingActivityService {
+@Slf4j
+@AllArgsConstructor
+public class TrainingActivityServiceImpl implements TrainingActivityService {
+	
+	// TO-DO(Refactoring): TrainingActivity should refer only to managing the database table. Everything else needs other impls(strava calls, refresh tokens, etc)
 
-    private final Logger log = LoggerFactory.getLogger(TrainingActivityService.class);
     private final TrainingActivityRepository trainingActivityRepository;
+    
+    @Qualifier("webClientStrava")
     private final WebClient webClientStrava;
+    
     private final UsuarioRepository usuarioRepository;
+    
     private final AemetService aemetService;
+    
     private final StravaTokenService stravaTokenService;
+    
     private final ApiRateLimiterService apiRateLimiter;
 
-    @Autowired
-    public TrainingActivityService(TrainingActivityRepository trainingActivityRepository, @Qualifier("webClientStrava") WebClient webClientStrava, TrainingActivityMapper trainingActivityMapper,
-                                 UsuarioRepository usuarioRepository, AemetService aemetService, StravaTokenService stravaTokenService, ApiRateLimiterService apiRateLimiter) {
-        this.usuarioRepository = usuarioRepository;
-        this.trainingActivityRepository = trainingActivityRepository;
-        this.webClientStrava = webClientStrava;
-        this.aemetService = aemetService;
-        this.stravaTokenService = stravaTokenService;
-        this.apiRateLimiter = apiRateLimiter;
-    }
-
+    
+    
     public Mono<Void> fetchAndSaveStravaActivities(UUID usuarioId, Long before, Long after, Integer page, Integer perPageResults) {
         return Mono.fromCallable(() -> usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new RuntimeException("Usuario with ID " + usuarioId + " not found")))

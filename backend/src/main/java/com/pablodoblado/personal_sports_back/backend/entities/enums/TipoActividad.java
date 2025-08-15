@@ -1,10 +1,11 @@
-package com.pablodoblado.personal_sports_back.backend.entity.enums;
+package com.pablodoblado.personal_sports_back.backend.entities.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 public enum TipoActividad {
 
     RIDE("Ride"),
@@ -16,7 +17,6 @@ public enum TipoActividad {
     MOUNTAINBIKERIDE("MountainBikeRide"),
     UNKNOWN("Unknown");
 
-    private static final Logger log = LoggerFactory.getLogger(TipoActividad.class);
     private final String stravaValue;
 
     TipoActividad(String stravaValue) {

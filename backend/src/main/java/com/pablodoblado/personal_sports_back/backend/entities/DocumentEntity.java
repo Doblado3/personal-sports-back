@@ -1,4 +1,4 @@
-package com.pablodoblado.personal_sports_back.backend.entity;
+package com.pablodoblado.personal_sports_back.backend.entities;
 
 import java.time.LocalDateTime;
 import java.util.List;

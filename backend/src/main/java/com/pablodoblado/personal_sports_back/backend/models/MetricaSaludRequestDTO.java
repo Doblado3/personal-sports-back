@@ -4,7 +4,7 @@ import java.time.LocalDate;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
 @Data
@@ -25,7 +25,7 @@ public class MetricaSaludRequestDTO {
     @Min(value = 0, message = "No es posible no pesar nada.")
     private Double peso;
 
-	
+	@NotBlank
 	@NotNull(message = "La calidad del sueño no puede ser nula")
 	private String calidadSueno;
 	

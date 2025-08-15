@@ -2,9 +2,11 @@
 package com.pablodoblado.personal_sports_back.backend.service;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
-import com.pablodoblado.personal_sports_back.backend.dto.StravaApi.StravaTokenResponse;
-import com.pablodoblado.personal_sports_back.backend.entity.Usuario;
-import com.pablodoblado.personal_sports_back.backend.repository.UsuarioRepository;
+import com.pablodoblado.personal_sports_back.backend.entities.Usuario;
+import com.pablodoblado.personal_sports_back.backend.models.StravaTokenResponse;
+import com.pablodoblado.personal_sports_back.backend.repositories.UsuarioRepository;
+import com.pablodoblado.personal_sports_back.backend.services.impls.StravaTokenService;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

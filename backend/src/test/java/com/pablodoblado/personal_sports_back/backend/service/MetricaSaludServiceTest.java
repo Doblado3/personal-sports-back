@@ -22,9 +22,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
-import com.pablodoblado.personal_sports_back.backend.entity.MetricaSalud;
-import com.pablodoblado.personal_sports_back.backend.entity.Usuario;
-import com.pablodoblado.personal_sports_back.backend.repository.MetricaSaludRepository;
+import com.pablodoblado.personal_sports_back.backend.entities.MetricaSalud;
+import com.pablodoblado.personal_sports_back.backend.entities.Usuario;
+import com.pablodoblado.personal_sports_back.backend.repositories.MetricaSaludRepository;
+import com.pablodoblado.personal_sports_back.backend.services.impls.MetricaSaludServiceImpl;
 
 @ExtendWith(MockitoExtension.class)
 public class MetricaSaludServiceTest {
@@ -33,7 +34,7 @@ public class MetricaSaludServiceTest {
     private MetricaSaludRepository metricaSaludRepository;
 
     @InjectMocks
-    private MetricaSaludService metricaSaludService;
+    private MetricaSaludServiceImpl metricaSaludService;
 
     private UUID testUserId;
     private List<MetricaSalud> metricas;

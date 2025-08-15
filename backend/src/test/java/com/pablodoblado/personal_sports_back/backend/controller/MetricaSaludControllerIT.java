@@ -114,5 +114,35 @@ public class MetricaSaludControllerIT {
         assertThat(updatedMetrica.getCalidadSueno()).isEqualTo("UPDATED");
         assertThat(updatedMetrica.getFechaRegistro()).isEqualTo(fechaRegistro);
     }
+    
+    @Test
+    void testDeleteMetricaSaludNotFound() throws NotFoundException {
+    	
+    	UUID random = UUID.randomUUID();
+    	LocalDate fechaRandom = LocalDate.of(2004, 02, 20);
+    	
+    	assertThrows(NotFoundException.class, () -> {
+            metricaSaludController.deleteRegistroByDate(random, fechaRandom);
+        });
+    	
+    	
+    	
+    }
+    
+    @Transactional
+    @Rollback
+    @Test
+    void testDeleteMetricaSaludByFechaRegistro() throws NotFoundException {
+    	
+    	MetricaSalud metricaSalud = metricaSaludRepository.findAll().get(0);
+    	UUID usuarioId = metricaSalud.getUsuario().getId();
+    	LocalDate fechaRegistro = metricaSalud.getFechaRegistro();
+    	
+    	ResponseEntity<?> responseEntity = metricaSaludController.deleteRegistroByDate(usuarioId, fechaRegistro);
+    	
+    	assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatusCode.valueOf(204));
+    	assertThat(metricaSaludRepository.findById(metricaSalud.getId()));
+    	
+    }
 }
 

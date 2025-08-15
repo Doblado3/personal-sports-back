@@ -1,10 +1,10 @@
-package com.pablodoblado.personal_sports_back.backend.dto.StravaApi;
+package com.pablodoblado.personal_sports_back.backend.models;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.pablodoblado.personal_sports_back.backend.entity.enums.TipoActividad;
+import com.pablodoblado.personal_sports_back.backend.entities.enums.TipoActividad;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

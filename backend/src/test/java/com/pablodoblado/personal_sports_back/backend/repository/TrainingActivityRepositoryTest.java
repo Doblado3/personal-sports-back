@@ -10,9 +10,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
-import com.pablodoblado.personal_sports_back.backend.entity.TrainingActivity;
-import com.pablodoblado.personal_sports_back.backend.entity.Usuario;
-import com.pablodoblado.personal_sports_back.backend.entity.enums.TipoActividad;
+import com.pablodoblado.personal_sports_back.backend.entities.TrainingActivity;
+import com.pablodoblado.personal_sports_back.backend.entities.Usuario;
+import com.pablodoblado.personal_sports_back.backend.entities.enums.TipoActividad;
+import com.pablodoblado.personal_sports_back.backend.repositories.TrainingActivityRepository;
 
 import jakarta.persistence.EntityManager;
 

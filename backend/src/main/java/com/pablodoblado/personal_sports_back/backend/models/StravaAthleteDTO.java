@@ -1,4 +1,4 @@
-package com.pablodoblado.personal_sports_back.backend.dto.StravaApi;
+package com.pablodoblado.personal_sports_back.backend.models;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

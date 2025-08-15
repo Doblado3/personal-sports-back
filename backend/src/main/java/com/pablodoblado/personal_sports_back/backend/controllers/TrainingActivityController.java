@@ -1,10 +1,12 @@
-package com.pablodoblado.personal_sports_back.backend.controller;
+package com.pablodoblado.personal_sports_back.backend.controllers;
 
-import com.pablodoblado.personal_sports_back.backend.service.TrainingActivityService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import com.pablodoblado.personal_sports_back.backend.services.impls.TrainingActivityServiceImpl;
+
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -16,9 +18,9 @@ import java.util.UUID;
 public class TrainingActivityController {
 
     private static final Logger log = LoggerFactory.getLogger(TrainingActivityController.class);
-    private final TrainingActivityService trainingActivityService;
+    private final TrainingActivityServiceImpl trainingActivityService;
 
-    public TrainingActivityController(TrainingActivityService trainingActivityService) {
+    public TrainingActivityController(TrainingActivityServiceImpl trainingActivityService) {
         this.trainingActivityService = trainingActivityService;
     }
 

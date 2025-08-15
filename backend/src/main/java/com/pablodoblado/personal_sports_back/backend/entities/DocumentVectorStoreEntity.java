@@ -1,4 +1,4 @@
-package com.pablodoblado.personal_sports_back.backend.entity;
+package com.pablodoblado.personal_sports_back.backend.entities;
 
 import jakarta.persistence.*;
 import lombok.Data;

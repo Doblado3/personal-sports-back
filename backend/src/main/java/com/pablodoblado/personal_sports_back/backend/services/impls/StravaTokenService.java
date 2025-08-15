@@ -1,4 +1,4 @@
-package com.pablodoblado.personal_sports_back.backend.service;
+package com.pablodoblado.personal_sports_back.backend.services.impls;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -9,9 +9,9 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import com.pablodoblado.personal_sports_back.backend.dto.StravaApi.StravaTokenResponse;
-import com.pablodoblado.personal_sports_back.backend.entity.Usuario;
-import com.pablodoblado.personal_sports_back.backend.repository.UsuarioRepository;
+import com.pablodoblado.personal_sports_back.backend.entities.Usuario;
+import com.pablodoblado.personal_sports_back.backend.models.StravaTokenResponse;
+import com.pablodoblado.personal_sports_back.backend.repositories.UsuarioRepository;
 
 @Service
 public class StravaTokenService {

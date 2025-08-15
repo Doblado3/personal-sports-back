@@ -1,13 +1,13 @@
-package com.pablodoblado.personal_sports_back.backend.repository;
+package com.pablodoblado.personal_sports_back.backend.repositories;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.pablodoblado.personal_sports_back.backend.entity.TrainingActivity;
-import com.pablodoblado.personal_sports_back.backend.entity.Usuario;
-import com.pablodoblado.personal_sports_back.backend.entity.enums.TipoActividad;
+import com.pablodoblado.personal_sports_back.backend.entities.TrainingActivity;
+import com.pablodoblado.personal_sports_back.backend.entities.Usuario;
+import com.pablodoblado.personal_sports_back.backend.entities.enums.TipoActividad;
 
 public interface TrainingActivityRepository extends JpaRepository<TrainingActivity, Long> {
 	

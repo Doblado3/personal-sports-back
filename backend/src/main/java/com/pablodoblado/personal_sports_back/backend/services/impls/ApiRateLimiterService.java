@@ -1,4 +1,4 @@
-package com.pablodoblado.personal_sports_back.backend.service;
+package com.pablodoblado.personal_sports_back.backend.services.impls;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

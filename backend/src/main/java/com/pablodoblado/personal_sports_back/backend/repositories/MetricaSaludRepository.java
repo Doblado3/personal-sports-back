@@ -1,4 +1,4 @@
-package com.pablodoblado.personal_sports_back.backend.repository;
+package com.pablodoblado.personal_sports_back.backend.repositories;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -10,8 +10,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
-import com.pablodoblado.personal_sports_back.backend.entity.MetricaSalud;
-import com.pablodoblado.personal_sports_back.backend.entity.Usuario;
+import com.pablodoblado.personal_sports_back.backend.entities.MetricaSalud;
+import com.pablodoblado.personal_sports_back.backend.entities.Usuario;
 
 public interface MetricaSaludRepository extends JpaRepository<MetricaSalud, UUID>, JpaSpecificationExecutor<MetricaSalud> {
 	

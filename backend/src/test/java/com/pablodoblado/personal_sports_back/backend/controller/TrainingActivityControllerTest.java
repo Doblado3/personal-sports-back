@@ -1,6 +1,8 @@
 package com.pablodoblado.personal_sports_back.backend.controller;
 
-import com.pablodoblado.personal_sports_back.backend.service.TrainingActivityService;
+import com.pablodoblado.personal_sports_back.backend.controllers.TrainingActivityController;
+import com.pablodoblado.personal_sports_back.backend.services.impls.TrainingActivityServiceImpl;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
@@ -20,7 +22,7 @@ public class TrainingActivityControllerTest {
     private WebTestClient webTestClient;
 
     @MockBean
-    private TrainingActivityService trainingActivityService;
+    private TrainingActivityServiceImpl trainingActivityService;
 
     @Test
     public void shouldAcknowledgeRequestAndProcessInBackground() {

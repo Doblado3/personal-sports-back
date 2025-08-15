@@ -1,4 +1,4 @@
-package com.pablodoblado.personal_sports_back.backend.service;
+package com.pablodoblado.personal_sports_back.backend.services.impls;
 
 import java.util.List;
 import java.util.Map;

@@ -1,11 +1,12 @@
-package com.pablodoblado.personal_sports_back.backend.service;
+package com.pablodoblado.personal_sports_back.backend.services.impls;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pablodoblado.personal_sports_back.backend.dto.AemetApi.AemetInitialResponseDTO;
-import com.pablodoblado.personal_sports_back.backend.dto.AemetApi.AemetObservationsDTO;
-import com.pablodoblado.personal_sports_back.backend.dto.AemetApi.AemetValuesDTO;
-import com.pablodoblado.personal_sports_back.backend.entity.TrainingActivity;
+import com.pablodoblado.personal_sports_back.backend.entities.TrainingActivity;
+import com.pablodoblado.personal_sports_back.backend.models.AemetInitialResponseDTO;
+import com.pablodoblado.personal_sports_back.backend.models.AemetObservationsDTO;
+import com.pablodoblado.personal_sports_back.backend.models.AemetValuesDTO;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
