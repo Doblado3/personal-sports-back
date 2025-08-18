@@ -17,6 +17,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -38,7 +40,7 @@ public class AemetServiceTest {
     @Autowired
     private AemetService aemetService;
 
-    @MockBean
+    @MockitoBean
     private ApiRateLimiterService apiRateLimiterService;
 
     @DynamicPropertySource
