@@ -7,6 +7,8 @@ target/
 /src/main/resources/data
 /src/main/resources/images
 
+.env
+
 
 ### STS ###
 .apt_generated
