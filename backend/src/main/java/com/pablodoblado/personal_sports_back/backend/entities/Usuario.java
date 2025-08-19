@@ -1,6 +1,8 @@
 package com.pablodoblado.personal_sports_back.backend.entities;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 import jakarta.persistence.*;
@@ -66,6 +68,34 @@ public class Usuario {
 	@PreUpdate
 	protected void onUpdate() {
 		this.updatedAt = LocalDateTime.now();
+	}
+	
+	@Builder.Default
+	@OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL)
+	private Set<MetricaSalud> metricas = new HashSet<>();
+	
+	public void addMetrica(MetricaSalud metrica) {
+		this.metricas.add(metrica);
+		metrica.setUsuario(this);
+	}
+	
+	public void removeMetrica(MetricaSalud metrica) {
+		this.metricas.remove(metrica);
+		metrica.setUsuario(null);
+	}
+	
+	@Builder.Default
+	@OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL)
+	private Set<TrainingActivity> actividades = new HashSet<>();
+	
+	public void addActivity(TrainingActivity activity) {
+		this.actividades.add(activity);
+		activity.setUsuario(this);
+	}
+	
+	public void removeActivity(TrainingActivity activity) {
+		this.actividades.remove(activity);
+		activity.setUsuario(null);
 	}
 
 
