@@ -1,142 +1,165 @@
 package com.pablodoblado.personal_sports_back.backend.services.impls;
 
-import com.pablodoblado.personal_sports_back.backend.entities.CyclingActivity;
 import com.pablodoblado.personal_sports_back.backend.entities.TrainingActivity;
 import com.pablodoblado.personal_sports_back.backend.entities.Usuario;
 import com.pablodoblado.personal_sports_back.backend.entities.enums.TipoActividad;
-import com.pablodoblado.personal_sports_back.backend.mappers.TrainingActivityMapper;
+import com.pablodoblado.personal_sports_back.backend.mappers.StravaActivityMapper;
 import com.pablodoblado.personal_sports_back.backend.models.StravaDetailedActivityDTO;
 import com.pablodoblado.personal_sports_back.backend.repositories.TrainingActivityRepository;
 import com.pablodoblado.personal_sports_back.backend.repositories.UsuarioRepository;
+import com.pablodoblado.personal_sports_back.backend.services.AemetService;
 import com.pablodoblado.personal_sports_back.backend.services.StravaActivityService;
-import com.pablodoblado.personal_sports_back.backend.services.TrainingActivityService;
-
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.CollectionUtils;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class StravaActivityServiceImpl implements StravaActivityService {
-	
-	// TO-DO(Refactoring): TrainingActivity should refer only to managing the database table. Everything else needs other impls(strava calls, refresh tokens, etc)
 
     private final TrainingActivityRepository trainingActivityRepository;
-    
-    @Qualifier("webClientStrava")
-    private final WebClient webClientStrava;
-    
+    private final RestTemplate restTemplate;
     private final UsuarioRepository usuarioRepository;
-    
     private final AemetService aemetService;
-    
-    private final StravaTokenService stravaTokenService;
-    
-    private final ApiRateLimiterService apiRateLimiter;
+    private final StravaTokenServiceImpl stravaTokenService;
+    private final ApiRateLimiterServiceImpl apiRateLimiter;
+    private final StravaActivityMapper stravaActivityMapper;
+    private final TransactionTemplate transactionTemplate;
 
-    
+    @Async("asyncExecutor")
     @Override
-    public Mono<Void> fetchAndSaveStravaActivities(UUID usuarioId, Long before, Long after, Integer page, Integer perPageResults) {
-        return Mono.fromCallable(() -> usuarioRepository.findById(usuarioId)
-                .orElseThrow(() -> new RuntimeException("Usuario with ID " + usuarioId + " not found")))
-                .subscribeOn(Schedulers.boundedElastic())
-                .flatMap(this::refreshTokenIfNecessary)
-                .flatMap(user -> {
+    public CompletableFuture<Integer> fetchAndSaveStravaActivities(UUID usuarioId, Long before, Long after, Integer page, Integer perPageResults) {
+        return findAndRefreshToken(usuarioId)
+                .thenCompose(user -> {
                     String uri = buildStravaActivitiesUri(before, after, page, perPageResults);
                     return fetchActivitiesFromStrava(user, uri)
-                            .flatMap(activities -> processAndSaveActivities(activities, user));
+                            .thenCompose(activities -> {
+                                if (CollectionUtils.isEmpty(activities)) {
+                                    log.info("No new activities were found from Strava.");
+                                    return CompletableFuture.completedFuture(0);
+                                }
+                                log.info("Fetched {} activities from Strava for user {}. Starting processing...", activities.size(), user.getId());
+                                return processAndSaveActivities(activities, user);
+                            });
                 });
     }
 
-    private Mono<Usuario> refreshTokenIfNecessary(Usuario usuario) {
-        long fiveMinutesFromNow = Instant.now().plusSeconds(300).getEpochSecond();
-        if (usuario.getStravaAccessToken() == null ||
-            usuario.getStravaTokenExpiresAt() == null ||
-            usuario.getStravaTokenExpiresAt() < fiveMinutesFromNow) {
-            log.info("Proactively refreshing Strava token for user {} as it's expired or near expiration.", usuario.getId());
-            return Mono.fromCallable(() -> stravaTokenService.refreshToken(usuario))
-                    .subscribeOn(Schedulers.boundedElastic());
-        }
-        return Mono.just(usuario);
+    private CompletableFuture<Usuario> findAndRefreshToken(UUID usuarioId) {
+        return CompletableFuture.supplyAsync(() -> {
+            Usuario usuario = usuarioRepository.findById(usuarioId)
+                    .orElseThrow(() -> new RuntimeException("User not found for id: " + usuarioId));
+
+            long fiveMinutesFromNow = Instant.now().plusSeconds(300).getEpochSecond();
+            if (usuario.getStravaAccessToken() == null || usuario.getStravaTokenExpiresAt() == null ||
+                    usuario.getStravaTokenExpiresAt() < fiveMinutesFromNow) {
+                log.info("Proactively refreshing Strava token for user {} as it's expired or near expiration.", usuario.getId());
+                return stravaTokenService.refreshToken(usuario);
+            }
+            return usuario;
+        });
     }
 
-    private Mono<List<StravaDetailedActivityDTO>> fetchActivitiesFromStrava(Usuario user, String uri) {
-        return apiRateLimiter.checkStravaRateLimit()
-                .then(Mono.defer(() -> {
-                    String accessToken = user.getStravaAccessToken();
-                    if (accessToken == null || accessToken.isEmpty()) {
-                        return Mono.error(new RuntimeException("No Strava access token for user " + user.getId()));
+    private CompletableFuture<List<StravaDetailedActivityDTO>> fetchActivitiesFromStrava(Usuario user, String uri) {
+        return CompletableFuture.supplyAsync(() -> makeStravaApiCall(user.getStravaAccessToken(), uri))
+                .exceptionally(ex -> {
+                    if (isUnauthorizedException(ex)) {
+                        log.warn("Strava API call failed with 401. Refreshing token and retrying.", ex);
+                        return refreshTokenAndRetry(user, uri);
                     }
-                    return makeStravaApiCall(accessToken, uri)
-                            .onErrorResume(WebClientResponseException.Unauthorized.class, e -> refreshTokenAndRetry(user, uri));
+                    throw new CompletionException("Failed to fetch Strava activities", ex);
+                });
+    }
+
+    private List<StravaDetailedActivityDTO> refreshTokenAndRetry(Usuario user, String uri) {
+        log.info("Executing token refresh and retry for user {}", user.getId());
+        Usuario refreshedUser = stravaTokenService.refreshToken(user);
+        if (refreshedUser.getStravaAccessToken() == null) {
+            throw new RuntimeException("Failed to get valid token after refresh for user: " + user.getId());
+        }
+        return makeStravaApiCall(refreshedUser.getStravaAccessToken(), uri);
+    }
+
+    public List<StravaDetailedActivityDTO> makeStravaApiCall(String accessToken, String uri) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<List<StravaDetailedActivityDTO>> responseEntity = restTemplate.exchange(
+                uri,
+                HttpMethod.GET,
+                entity,
+                new ParameterizedTypeReference<>() {}
+        );
+
+        apiRateLimiter.updateStravaRateLimit(responseEntity.getHeaders());
+        return responseEntity.getBody();
+    }
+
+    private boolean isUnauthorizedException(Throwable ex) {
+        Throwable cause = ex.getCause();
+        if (ex instanceof HttpClientErrorException) {
+            return ((HttpClientErrorException) ex).getStatusCode().value() == 401;
+        }
+        if (cause instanceof HttpClientErrorException) {
+            return ((HttpClientErrorException) cause).getStatusCode().value() == 401;
+        }
+        return false;
+    }
+
+    private CompletableFuture<Integer> processAndSaveActivities(List<StravaDetailedActivityDTO> activities, Usuario user) {
+        List<CompletableFuture<Optional<TrainingActivity>>> futures = activities.stream()
+                .map(dto -> mapAndCheckExistence(dto, user))
+                .collect(Collectors.toList());
+
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                .thenApplyAsync(v -> transactionTemplate.execute(status -> {
+                    List<TrainingActivity> newActivities = futures.stream()
+                            .map(CompletableFuture::join)
+                            .filter(Optional::isPresent)
+                            .map(Optional::get)
+                            .collect(Collectors.toList());
+
+                    if (!newActivities.isEmpty()) {
+                        log.info("Saving {} new Strava activities for user {}.", newActivities.size(), user.getId());
+                        trainingActivityRepository.saveAll(newActivities);
+                        return newActivities.size();
+                    }
+                    log.info("No new activities to save for user {}.", user.getId());
+                    return 0;
                 }));
     }
 
-    private Mono<List<StravaDetailedActivityDTO>> makeStravaApiCall(String accessToken, String uri) {
-        return webClientStrava.get().uri(uri)
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                .retrieve()
-                .toEntity(new ParameterizedTypeReference<List<StravaDetailedActivityDTO>>() {})
-                .map(responseEntity -> {
-                    apiRateLimiter.updateStravaRateLimit(responseEntity.getHeaders());
-                    return responseEntity.getBody();
-                });
-    }
-
-    private Mono<List<StravaDetailedActivityDTO>> refreshTokenAndRetry(Usuario user, String uri) {
-        log.warn("Strava API call failed with 401 UNAUTHORIZED for user {}. Refreshing token and retrying.", user.getId());
-        return Mono.fromCallable(() -> stravaTokenService.refreshToken(user))
-                .subscribeOn(Schedulers.boundedElastic())
-                .flatMap(refreshedUser -> {
-                    if (refreshedUser.getStravaAccessToken() == null || refreshedUser.getStravaAccessToken().isEmpty()) {
-                        return Mono.error(new RuntimeException("Failed to get valid token after refresh for user: " + user.getId()));
+    private CompletableFuture<Optional<TrainingActivity>> mapAndCheckExistence(StravaDetailedActivityDTO dto, Usuario user) {
+        return CompletableFuture.supplyAsync(() -> {
+                    if (trainingActivityRepository.existsById(dto.getId())) {
+                        return Optional.<TrainingActivity>empty();
                     }
-                    return makeStravaApiCall(refreshedUser.getStravaAccessToken(), uri);
-                });
-    }
-
-    private Mono<Void> processAndSaveActivities(List<StravaDetailedActivityDTO> activities, Usuario user) {
-        if (CollectionUtils.isEmpty(activities)) {
-            log.info("No new activities from Strava.");
-            return Mono.empty();
-        }
-        return Flux.fromIterable(activities)
-                .flatMap(dto -> mapAndCheckExistence(dto, user))
-                .collectList()
-                .flatMap(this::saveActivities);
-    }
-
-    private Mono<TrainingActivity> mapAndCheckExistence(StravaDetailedActivityDTO dto, Usuario user) {
-        return mapStravaDtoToEntity(dto, user)
-                .flatMap(activity -> Mono.fromCallable(() -> trainingActivityRepository.existsById(activity.getId()))
-                        .subscribeOn(Schedulers.boundedElastic())
-                        .flatMap(exists -> exists ? Mono.empty() : Mono.just(activity)));
-    }
-
-    private Mono<Void> saveActivities(List<TrainingActivity> activities) {
-        if (!CollectionUtils.isEmpty(activities)) {
-            return Mono.fromRunnable(() -> trainingActivityRepository.saveAll(activities))
-                    .subscribeOn(Schedulers.boundedElastic())
-                    .doOnSuccess(v -> log.info("Saved {} new Strava activities.", activities.size()))
-                    .then();
-        }
-        log.info("No new activities to save.");
-        return Mono.empty();
+                    TrainingActivity activity = mapStravaDtoToEntity(dto, user);
+                    return Optional.of(activity);
+                })
+                .thenCompose(optionalActivity -> optionalActivity
+                        .map(activity -> aemetService.getValoresClimatologicosRangoFechas(activity)
+                                .thenApply(Optional::of))
+                        .orElse(CompletableFuture.completedFuture(Optional.empty())));
     }
 
     private String buildStravaActivitiesUri(Long before, Long after, Integer page, Integer perPageResults) {
@@ -148,36 +171,14 @@ public class StravaActivityServiceImpl implements StravaActivityService {
         return uriBuilder.toString();
     }
 
-    private Mono<TrainingActivity> mapStravaDtoToEntity(StravaDetailedActivityDTO dto, Usuario user) {
-        TrainingActivity activity = (dto.getTipo() == TipoActividad.RIDE || dto.getTipo() == TipoActividad.MOUNTAINBIKERIDE) ? new CyclingActivity() : new TrainingActivity();
+    private TrainingActivity mapStravaDtoToEntity(StravaDetailedActivityDTO dto, Usuario user) {
+        TrainingActivity activity;
+        if (dto.getTipo() == TipoActividad.RIDE || dto.getTipo() == TipoActividad.MOUNTAINBIKERIDE) {
+            activity = stravaActivityMapper.toCyclingActivity(dto);
+        } else {
+            activity = stravaActivityMapper.toTrainingActivity(dto);
+        }
         activity.setUsuario(user);
-
-        activity.setId(dto.getId());
-        activity.setNombre(dto.getNombre());
-        activity.setDistancia(dto.getDistancia());
-        activity.setTiempoTotal(dto.getTiempoTotal());
-        activity.setTiempoActivo(dto.getTiempoActivo());
-        activity.setDesnivel(dto.getDesnivel());
-        activity.setMaxAltitud(dto.getMaxAltitud());
-        activity.setMinAltitud(dto.getMinAltitud());
-        activity.setFechaComienzo(dto.getFechaComienzo());
-        activity.setVelocidadMaxima(dto.getVelocidadMaxima());
-        activity.setVelocidadMedia(dto.getVelocidadMedia());
-        activity.setKiloJulios(dto.getKiloJulios());
-        activity.setPulsoMedio(dto.getPulsoMedio());
-        activity.setPulsoMaximo(dto.getPulsoMaximo());
-        if (dto.getLatlng() != null && !dto.getLatlng().isEmpty()) {
-            activity.setStartLatlng(dto.getLatlng().get(0));
-        }
-
-        if (activity instanceof CyclingActivity) {
-            CyclingActivity cyclingActivity = (CyclingActivity) activity;
-            cyclingActivity.setPotenciometro(dto.getPotenciometro());
-            cyclingActivity.setCadencia(dto.getCadence());
-            cyclingActivity.setVatiosMedios(dto.getVatiosMedios());
-            cyclingActivity.setVatiosMaximos(dto.getVatiosMaximos());
-        }
-
-        return aemetService.getValoresClimatologicosRangoFechas(activity);
+        return activity;
     }
 }

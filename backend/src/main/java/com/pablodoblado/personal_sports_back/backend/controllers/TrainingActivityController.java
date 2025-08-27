@@ -50,7 +50,7 @@ public class TrainingActivityController {
 	}
 	
 	@GetMapping(TRAINING_PATH)
-		public List<TrainingActivityResponseDTO> listActivitiesByParams(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dia,
+	public List<TrainingActivityResponseDTO> listActivitiesByParams(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dia,
 			@RequestParam(required = false) TipoActividad tipo, 
 			@RequestParam(required = false) Double rangoZonaMin,
 			@RequestParam(required = false) Double rangoZonaMax) throws NotFoundException {

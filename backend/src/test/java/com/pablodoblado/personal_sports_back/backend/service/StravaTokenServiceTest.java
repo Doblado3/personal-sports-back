@@ -3,10 +3,8 @@ package com.pablodoblado.personal_sports_back.backend.service;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.pablodoblado.personal_sports_back.backend.entities.Usuario;
-import com.pablodoblado.personal_sports_back.backend.models.StravaTokenResponse;
 import com.pablodoblado.personal_sports_back.backend.repositories.UsuarioRepository;
-import com.pablodoblado.personal_sports_back.backend.services.impls.StravaTokenService;
-
+import com.pablodoblado.personal_sports_back.backend.services.StravaTokenService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +17,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Optional;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
@@ -33,13 +30,14 @@ import static org.mockito.Mockito.when;
 public class StravaTokenServiceTest {
 
     @Autowired
-    private StravaTokenService stravaTokenService;
+    private StravaTokenService stravaTokenService; 
 
-    @MockitoBean
+    @MockitoBean 
     private UsuarioRepository usuarioRepository;
 
     @DynamicPropertySource
     static void setProperties(DynamicPropertyRegistry registry) {
+        
         registry.add("strava.api.base-url", () -> "http://localhost:8089");
     }
 
@@ -55,24 +53,23 @@ public class StravaTokenServiceTest {
 
     @Test
     void shouldRefreshTokenSuccessfully() throws Exception {
-    	
-        when(usuarioRepository.save(any(Usuario.class))).thenReturn(usuario);
+        
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         String responseBody = new String(Files.readAllBytes(Paths.get("src/test/resources/__files/stravaTokenResponseDTO.json")));
 
         stubFor(post(urlEqualTo("/oauth/token"))
-        		.withHeader(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_FORM_URLENCODED_VALUE))
-        		.withRequestBody(containing("client_id=168538"))
-        		.withRequestBody(containing("client_secret=f3100431ead75d21e13d5b7798759266c3c30c7a"))
-        		.withRequestBody(containing("refresh_token=test-refresh-token"))
-        		.withRequestBody(containing("grant_type=refresh_token"))
+                .withHeader(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_FORM_URLENCODED_VALUE))
+                .withRequestBody(containing("refresh_token=test-refresh-token"))
                 .willReturn(aResponse()
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                         .withBody(responseBody)
                         .withStatus(200)));
 
+        
         Usuario updatedUsuario = stravaTokenService.refreshToken(usuario);
 
+        
         assertThat(updatedUsuario).isNotNull();
         assertThat(updatedUsuario.getStravaAccessToken()).isEqualTo("new-access-token");
         assertThat(updatedUsuario.getStravaRefreshToken()).isEqualTo("new-refresh-token");
@@ -80,11 +77,11 @@ public class StravaTokenServiceTest {
     }
 
     @Test
-    void throwExceptionRefreshingUserTokens() {
+    void throwExceptionWhenRefreshingTokens() {
         
         stubFor(post(urlEqualTo("/oauth/token"))
                 .willReturn(aResponse()
-                        .withStatus(500) 
+                        .withStatus(500)
                         .withBody("Internal Server Error from Strava")));
 
         
@@ -92,6 +89,7 @@ public class StravaTokenServiceTest {
             stravaTokenService.refreshToken(usuario);
         });
 
-        assertThat(thrown.getMessage()).contains("Error during Strava token refresh or retry for user");
+        // Assert that our service wrapped the error correctly.
+        assertThat(thrown.getMessage()).contains("Error during Strava token refresh for user");
     }
 }

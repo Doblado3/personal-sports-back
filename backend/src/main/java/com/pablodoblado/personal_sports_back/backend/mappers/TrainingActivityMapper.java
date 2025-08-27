@@ -1,8 +1,6 @@
 package com.pablodoblado.personal_sports_back.backend.mappers;
 
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+
 import java.util.UUID;
 
 import org.mapstruct.Mapper;
@@ -17,7 +15,7 @@ import com.pablodoblado.personal_sports_back.backend.models.CyclingActivityRespo
 import com.pablodoblado.personal_sports_back.backend.models.TrainingActivityRequestDTO;
 import com.pablodoblado.personal_sports_back.backend.models.TrainingActivityResponseDTO;
 
-@Mapper(uses = {CyclingActivityMapper.class, VueltaMapper.class, DateMapper.class})
+@Mapper(componentModel = "spring", uses = {CyclingActivityMapper.class, VueltaMapper.class, DateMapper.class})
 public interface TrainingActivityMapper {
 	
 	@SubclassMapping(source = CyclingActivityRequestDTO.class, target = CyclingActivity.class)

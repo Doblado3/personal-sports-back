@@ -1,170 +1,161 @@
 package com.pablodoblado.personal_sports_back.backend.service;
 
-import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.pablodoblado.personal_sports_back.backend.entities.TrainingActivity;
 import com.pablodoblado.personal_sports_back.backend.entities.Usuario;
+import com.pablodoblado.personal_sports_back.backend.mappers.StravaActivityMapper;
+import com.pablodoblado.personal_sports_back.backend.models.StravaDetailedActivityDTO;
 import com.pablodoblado.personal_sports_back.backend.repositories.TrainingActivityRepository;
 import com.pablodoblado.personal_sports_back.backend.repositories.UsuarioRepository;
-import com.pablodoblado.personal_sports_back.backend.services.impls.AemetService;
-import com.pablodoblado.personal_sports_back.backend.services.impls.ApiRateLimiterService;
-import com.pablodoblado.personal_sports_back.backend.services.impls.StravaTokenService;
+import com.pablodoblado.personal_sports_back.backend.services.AemetService;
+import com.pablodoblado.personal_sports_back.backend.services.impls.ApiRateLimiterServiceImpl;
 import com.pablodoblado.personal_sports_back.backend.services.impls.StravaActivityServiceImpl;
-
+import com.pablodoblado.personal_sports_back.backend.services.impls.StravaTokenServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
 
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
-@SpringBootTest
-@WireMockTest(httpPort = 8089)
+@ExtendWith(MockitoExtension.class)
 public class StravaActivityServiceTest {
 
-    @Autowired
-    private StravaActivityServiceImpl trainingActivityService;
-
-    @MockitoBean
-    private UsuarioRepository usuarioRepository;
-
-    @MockitoBean
+    @Mock
     private TrainingActivityRepository trainingActivityRepository;
-
-    @MockitoBean
+    @Mock
+    private RestTemplate restTemplate;
+    @Mock
+    private UsuarioRepository usuarioRepository;
+    @Mock
     private AemetService aemetService;
+    @Mock
+    private StravaTokenServiceImpl stravaTokenService;
+    @Mock
+    private ApiRateLimiterServiceImpl apiRateLimiter;
+    @Mock
+    private StravaActivityMapper stravaActivityMapper;
+    @Mock
+    private TransactionTemplate transactionTemplate;
 
-    @MockitoBean
-    private StravaTokenService stravaTokenService;
-
-    @MockitoBean
-    private ApiRateLimiterService apiRateLimiterService;
-
-    @DynamicPropertySource
-    static void setProperties(DynamicPropertyRegistry registry) {
-        registry.add("strava.api.base-url", () -> "http://localhost:8089");
-    }
+    @InjectMocks
+    private StravaActivityServiceImpl stravaActivityService;
 
     private Usuario usuario;
-    private Usuario usuarioExpirado;
+    private StravaDetailedActivityDTO activityDTO;
 
     @BeforeEach
     void setUp() {
+        lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation ->
+                invocation.getArgument(0, org.springframework.transaction.support.TransactionCallback.class).doInTransaction(null));
+
         usuario = new Usuario();
-        usuario.setId(UUID.fromString("b2f22e50-321d-4816-a8bd-7a0670b72045"));
-        usuario.setNombre("Test User");
-        usuario.setStravaAccessToken("test-token");
-        usuario.setStravaRefreshToken("test-refresh-token");
-        usuario.setStravaTokenExpiresAt(System.currentTimeMillis() / 1000 + 3600);
+        usuario.setId(UUID.randomUUID());
+        usuario.setStravaAccessToken("valid-token");
+        usuario.setStravaTokenExpiresAt(Instant.now().getEpochSecond() + 3600);
 
-        usuarioExpirado = new Usuario();
-        usuarioExpirado.setId(UUID.fromString("1d2559a9-1c63-4171-94b2-07be52a999d8"));
-        usuarioExpirado.setNombre("Test User Expired");
-        usuarioExpirado.setStravaAccessToken("expired-token");
-        usuarioExpirado.setStravaRefreshToken("test-refresh-token");
-        usuarioExpirado.setStravaTokenExpiresAt(System.currentTimeMillis() / 1000 - 3600);
-
-        when(apiRateLimiterService.checkStravaRateLimit()).thenReturn(Mono.empty());
-        when(aemetService.getValoresClimatologicosRangoFechas(any(TrainingActivity.class)))
-                .thenAnswer(invocation -> Mono.just(invocation.getArgument(0)));
-        when(trainingActivityRepository.saveAll(any())).thenReturn(Collections.emptyList());
+        activityDTO = new StravaDetailedActivityDTO();
+        activityDTO.setId(123L);
+        activityDTO.setNombre("Test Activity");
     }
 
     @Test
-    void shouldFetchAndSaveStravaActivities() throws IOException {
+    void shouldFetchAndSaveNewActivities() {
         when(usuarioRepository.findById(usuario.getId())).thenReturn(Optional.of(usuario));
-        when(trainingActivityRepository.existsById(any())).thenReturn(false);
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
+                .thenReturn(ResponseEntity.ok(List.of(activityDTO)));
+        when(trainingActivityRepository.existsById(activityDTO.getId())).thenReturn(false);
+        when(stravaActivityMapper.toTrainingActivity(any())).thenReturn(new TrainingActivity());
+        when(aemetService.getValoresClimatologicosRangoFechas(any(TrainingActivity.class)))
+                .thenAnswer(inv -> CompletableFuture.completedFuture(inv.getArgument(0)));
 
-        String responseBody = new String(Files.readAllBytes(Paths.get("src/test/resources/__files/stravaDetailedActivityDTO.json")));
-        stubFor(get(urlPathEqualTo("/athlete/activities"))
-                .willReturn(aResponse()
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .withBody(responseBody)
-                        .withStatus(200)));
+        Integer result = stravaActivityService.fetchAndSaveStravaActivities(usuario.getId(), null, null, 1, 1).join();
 
-        Mono<Void> result = trainingActivityService.fetchAndSaveStravaActivities(usuario.getId(), 1L, 2L, 1, 30);
-
-        StepVerifier.create(result).verifyComplete();
-
+        assertThat(result).isEqualTo(1);
         ArgumentCaptor<List<TrainingActivity>> captor = ArgumentCaptor.forClass(List.class);
         verify(trainingActivityRepository).saveAll(captor.capture());
-        List<TrainingActivity> savedActivities = captor.getValue();
-
-        assertThat(savedActivities).isNotNull();
-        assertThat(savedActivities).hasSize(1);
-        assertThat(savedActivities.get(0).getNombre()).isEqualTo("Morning Run");
+        assertThat(captor.getValue()).hasSize(1);
     }
 
     @Test
-    void shouldRefreshTokenAndFetchActivitiesWhenTokenIsExpired() throws IOException {
-        when(usuarioRepository.findById(usuarioExpirado.getId())).thenReturn(Optional.of(usuarioExpirado));
-        when(trainingActivityRepository.existsById(any())).thenReturn(false);
-
+    void shouldRefreshTokenOn401AndSucceed() {
         Usuario refreshedUser = new Usuario();
-        refreshedUser.setId(usuarioExpirado.getId());
-        refreshedUser.setStravaAccessToken("new-refreshed-token");
-        when(stravaTokenService.refreshToken(any(Usuario.class))).thenReturn(refreshedUser);
+        refreshedUser.setStravaAccessToken("refreshed-token");
 
-        String responseBody = new String(Files.readAllBytes(Paths.get("src/test/resources/__files/stravaDetailedActivityDTO.json")));
-        stubFor(get(urlPathEqualTo("/athlete/activities"))
-                .withHeader("Authorization", equalTo("Bearer new-refreshed-token"))
-                .willReturn(aResponse()
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .withBody(responseBody)
-                        .withStatus(200)));
-
-        Mono<Void> result = trainingActivityService.fetchAndSaveStravaActivities(usuarioExpirado.getId(), 1L, 2L, 1, 30);
-
-        StepVerifier.create(result).verifyComplete();
-        verify(stravaTokenService).refreshToken(any(Usuario.class));
-    }
-
-    @Test
-    void shouldRefreshTokenOn401AndRetry() throws IOException {
         when(usuarioRepository.findById(usuario.getId())).thenReturn(Optional.of(usuario));
-        when(trainingActivityRepository.existsById(any())).thenReturn(false);
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
+            .thenAnswer(invocation -> {
+                HttpEntity<?> entity = invocation.getArgument(2);
+                String authHeader = entity.getHeaders().getFirst("Authorization");
+                if ("Bearer valid-token".equals(authHeader)) {
+                    throw new HttpClientErrorException(HttpStatus.UNAUTHORIZED);
+                }
+                if ("Bearer refreshed-token".equals(authHeader)) {
+                    return ResponseEntity.ok(List.of(activityDTO));
+                }
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            });
 
-        Usuario refreshedUser = new Usuario();
-        refreshedUser.setId(usuario.getId());
-        refreshedUser.setStravaAccessToken("new-refreshed-token-on-401");
-        when(stravaTokenService.refreshToken(any(Usuario.class))).thenReturn(refreshedUser);
+        when(stravaTokenService.refreshToken(usuario)).thenReturn(refreshedUser);
+        when(trainingActivityRepository.existsById(activityDTO.getId())).thenReturn(false);
+        when(stravaActivityMapper.toTrainingActivity(any())).thenReturn(new TrainingActivity());
+        when(aemetService.getValoresClimatologicosRangoFechas(any(TrainingActivity.class)))
+                .thenAnswer(inv -> CompletableFuture.completedFuture(inv.getArgument(0)));
 
-        String responseBody = new String(Files.readAllBytes(Paths.get("src/test/resources/__files/stravaDetailedActivityDTO.json")));
+        Integer result = stravaActivityService.fetchAndSaveStravaActivities(usuario.getId(), null, null, 1, 1).join();
 
-        stubFor(get(urlPathEqualTo("/athlete/activities"))
-                .withHeader("Authorization", equalTo("Bearer " + usuario.getStravaAccessToken()))
-                .willReturn(aResponse().withStatus(401)));
+        assertThat(result).isEqualTo(1);
+        verify(stravaTokenService).refreshToken(usuario);
+        verify(restTemplate, times(2)).exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class));
+    }
 
-        stubFor(get(urlPathEqualTo("/athlete/activities"))
-                .withHeader("Authorization", equalTo("Bearer " + refreshedUser.getStravaAccessToken()))
-                .willReturn(aResponse()
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .withBody(responseBody)
-                        .withStatus(200)));
+    @Test
+    void shouldReturnZeroWhenNoActivitiesAreFetched() {
+        when(usuarioRepository.findById(usuario.getId())).thenReturn(Optional.of(usuario));
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
+                .thenReturn(ResponseEntity.ok(Collections.emptyList()));
 
-        Mono<Void> result = trainingActivityService.fetchAndSaveStravaActivities(usuario.getId(), 1L, 2L, 1, 30);
+        Integer result = stravaActivityService.fetchAndSaveStravaActivities(usuario.getId(), null, null, 1, 1).join();
 
-        StepVerifier.create(result).verifyComplete();
-        verify(stravaTokenService).refreshToken(any(Usuario.class));
+        assertThat(result).isZero();
+        verify(trainingActivityRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void shouldThrowExceptionWhenApiFailsWithNonRetriableError() {
+    	
+        when(usuarioRepository.findById(usuario.getId())).thenReturn(Optional.of(usuario));
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
+                .thenThrow(new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
+
+        CompletableFuture<Integer> future = stravaActivityService.fetchAndSaveStravaActivities(usuario.getId(), null, null, 1, 1);
+
+        java.util.concurrent.CompletionException exception = assertThrows(java.util.concurrent.CompletionException.class, future::join);
+
+        assertThat(exception.getCause()).isInstanceOf(java.util.concurrent.CompletionException.class);
+        
+
+        Throwable rootCause = exception.getCause().getCause();
+        assertThat(rootCause).isInstanceOf(HttpClientErrorException.class);
     }
 }

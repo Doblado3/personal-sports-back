@@ -1,101 +1,113 @@
 package com.pablodoblado.personal_sports_back.backend.service;
 
+import com.pablodoblado.personal_sports_back.backend.services.impls.ApiRateLimiterServiceImpl;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.pablodoblado.personal_sports_back.backend.services.impls.ApiRateLimiterService;
-
-import reactor.test.StepVerifier;
-
 import java.lang.reflect.Field;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.junit.jupiter.api.Assertions.*;
+
+
 public class ApiRateLimiterServiceTest {
 
-    private ApiRateLimiterService apiRateLimiter;
-    private long stravaShortTermWindow;
-    private long stravaDailyWindow;
-    private long aemetWindow;
+    private ApiRateLimiterServiceImpl apiRateLimiter;
 
     @BeforeEach
-    void setUp() throws Exception {
-        apiRateLimiter = new ApiRateLimiterService();
-        // Use reflection to get private static final fields
-        Field shortTermWindowField = ApiRateLimiterService.class.getDeclaredField("STRAVA_SHORT_TERM_WINDOW");
-        shortTermWindowField.setAccessible(true);
-        stravaShortTermWindow = (long) shortTermWindowField.get(null);
-
-        Field dailyWindowField = ApiRateLimiterService.class.getDeclaredField("STRAVA_DAILY_WINDOW");
-        dailyWindowField.setAccessible(true);
-        stravaDailyWindow = (long) dailyWindowField.get(null);
-
-        Field aemetWindowField = ApiRateLimiterService.class.getDeclaredField("AEMET_WINDOW_SECONDS");
-        aemetWindowField.setAccessible(true);
-        aemetWindow = (long) aemetWindowField.get(null);
+    void setUp() {
+        apiRateLimiter = new ApiRateLimiterServiceImpl();
     }
 
     @Test
     void shouldNotThrowExceptionWhenStravaRateLimitIsNotExceeded() {
-        StepVerifier.create(apiRateLimiter.checkStravaRateLimit())
-                .verifyComplete();
+    	
+        assertDoesNotThrow(() -> apiRateLimiter.checkStravaRateLimit());
     }
 
     @Test
     void shouldThrowExceptionWhenShortTermRateLimitIsExceeded() throws Exception {
-        // Set short-term usage to the limit, long-term is fine
+        
         setStravaUsage(200, 500);
 
-        StepVerifier.create(apiRateLimiter.checkStravaRateLimit())
-                .expectErrorMessage("Strava API rate limit exceeded for the 15-minute window.")
-                .verify();
+        
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            apiRateLimiter.checkStravaRateLimit();
+        });
+        assertEquals("Strava API rate limit exceeded for the 15-minute window.", exception.getMessage());
     }
 
     @Test
     void shouldThrowExceptionWhenLongTermRateLimitIsExceeded() throws Exception {
-        // Set long-term usage to the limit, short-term is fine
+        
         setStravaUsage(100, 1000);
 
-        StepVerifier.create(apiRateLimiter.checkStravaRateLimit())
-                .expectErrorMessage("Strava API rate limit exceeded for the daily window.")
-                .verify();
+        
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            apiRateLimiter.checkStravaRateLimit();
+        });
+        assertEquals("Strava API rate limit exceeded for the daily window.", exception.getMessage());
     }
 
     @Test
-    void shouldDelayWhenAemetRateLimitIsExceeded() throws Exception {
-        // Set AEMET usage to the limit
-        setAemetUsage(50);
+    void shouldNotThrowAndDelayWhenAemetRateLimitIsExceeded() {
+        // Define a fixed point in time, 59 seconds into a minute.
+        // The AEMET window is 60s, so this leaves 1s to wait.
+        Instant fixedInstant = Instant.ofEpochSecond(1672531259L); // An arbitrary time where (seconds % 60) = 59
+        Clock fixedClock = Clock.fixed(fixedInstant, ZoneOffset.UTC);
 
-        // The mono should complete after a delay, not error out.
-        StepVerifier.create(apiRateLimiter.checkAemetRateLimit())
-                .expectComplete()
-                .verify(Duration.ofSeconds(aemetWindow + 2)); // Verify it takes time to complete
+        // Create a service instance with the fixed clock.
+        ApiRateLimiterServiceImpl rateLimiterWithFixedClock = new ApiRateLimiterServiceImpl(fixedClock);
+
+        // Use a helper to set the usage for the specific time window.
+        assertDoesNotThrow(() -> setAemetUsageForService(rateLimiterWithFixedClock, 50, fixedClock));
+
+        // Assert that the method completes within 2 seconds. The actual wait time should be 1 second.
+        assertTimeoutPreemptively(Duration.ofSeconds(2), () -> {
+            rateLimiterWithFixedClock.checkAemetRateLimit();
+        }, "The delay should be predictable and less than 2 seconds.");
     }
 
     // Helper methods to set internal state via reflection
     private void setStravaUsage(int shortTerm, int longTerm) throws Exception {
-        Field shortTermUsageField = ApiRateLimiterService.class.getDeclaredField("shortTermUsage");
+        Field shortTermUsageField = ApiRateLimiterServiceImpl.class.getDeclaredField("shortTermUsage");
         shortTermUsageField.setAccessible(true);
         @SuppressWarnings("unchecked")
         ConcurrentHashMap<String, AtomicInteger> shortTermUsageMap = (ConcurrentHashMap<String, AtomicInteger>) shortTermUsageField.get(apiRateLimiter);
+        long stravaShortTermWindow = getPrivateStaticLong("STRAVA_SHORT_TERM_WINDOW");
         String currentWindowKey = String.valueOf((System.currentTimeMillis() / 1000) / stravaShortTermWindow);
         shortTermUsageMap.put(currentWindowKey, new AtomicInteger(shortTerm));
 
-        Field longTermUsageField = ApiRateLimiterService.class.getDeclaredField("longTermUsage");
+        Field longTermUsageField = ApiRateLimiterServiceImpl.class.getDeclaredField("longTermUsage");
         longTermUsageField.setAccessible(true);
         @SuppressWarnings("unchecked")
         ConcurrentHashMap<String, AtomicInteger> longTermUsageMap = (ConcurrentHashMap<String, AtomicInteger>) longTermUsageField.get(apiRateLimiter);
+        long stravaDailyWindow = getPrivateStaticLong("STRAVA_DAILY_WINDOW");
         String currentDayKey = String.valueOf((System.currentTimeMillis() / 1000) / stravaDailyWindow);
         longTermUsageMap.put(currentDayKey, new AtomicInteger(longTerm));
     }
 
-    private void setAemetUsage(int usage) throws Exception {
-        Field aemetUsageField = ApiRateLimiterService.class.getDeclaredField("aemetUsage");
+    private void setAemetUsageForService(ApiRateLimiterServiceImpl service, int usage, Clock clock) throws Exception {
+        Field aemetUsageField = ApiRateLimiterServiceImpl.class.getDeclaredField("aemetUsage");
         aemetUsageField.setAccessible(true);
         @SuppressWarnings("unchecked")
-        ConcurrentHashMap<String, AtomicInteger> aemetUsageMap = (ConcurrentHashMap<String, AtomicInteger>) aemetUsageField.get(apiRateLimiter);
-        String currentWindow = String.valueOf((System.currentTimeMillis() / 1000) / aemetWindow);
+        ConcurrentHashMap<String, AtomicInteger> aemetUsageMap = (ConcurrentHashMap<String, AtomicInteger>) aemetUsageField.get(service);
+        
+        long aemetWindow = getPrivateStaticLong("AEMET_WINDOW_SECONDS");
+        long nowSeconds = clock.instant().getEpochSecond();
+        String currentWindow = String.valueOf(nowSeconds / aemetWindow);
         aemetUsageMap.put(currentWindow, new AtomicInteger(usage));
+    }
+
+    private long getPrivateStaticLong(String fieldName) throws Exception {
+        Field field = ApiRateLimiterServiceImpl.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return (long) field.get(null);
     }
 }

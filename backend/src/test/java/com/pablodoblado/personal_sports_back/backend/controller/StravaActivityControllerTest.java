@@ -1,43 +1,48 @@
 package com.pablodoblado.personal_sports_back.backend.controller;
 
 import com.pablodoblado.personal_sports_back.backend.controllers.StravaActivityController;
-import com.pablodoblado.personal_sports_back.backend.services.impls.StravaActivityServiceImpl;
+import com.pablodoblado.personal_sports_back.backend.services.StravaActivityService;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.reactive.server.WebTestClient;
-import reactor.core.publisher.Mono;
+import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-@WebFluxTest(StravaActivityController.class)
+@WebMvcTest(StravaActivityController.class)
 public class StravaActivityControllerTest {
+	
 
     @Autowired
-    private WebTestClient webTestClient;
+    private MockMvc mockMvc;
 
     @MockitoBean
-    private StravaActivityServiceImpl trainingActivityService;
+    private StravaActivityService stravaService;
 
     @Test
-    public void shouldAcknowledgeRequestAndProcessInBackground() {
-        when(trainingActivityService.fetchAndSaveStravaActivities(any(UUID.class), any(Long.class), any(Long.class), any(Integer.class), any(Integer.class)))
-                .thenReturn(Mono.empty());
+    public void shouldAcknowledgeRequestAndProcessInBackground() throws Exception {
+    	
+    	UUID usuarioId = UUID.randomUUID();
+    	
+        when(stravaService.fetchAndSaveStravaActivities(any(UUID.class), any(Long.class), any(Long.class), any(Integer.class), any(Integer.class)))
+                .thenReturn(CompletableFuture.completedFuture(1));
 
-        webTestClient.post()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/api/trainingActivities/fetchStravaActivities/{usuarioId}")
-                        .queryParam("before", "1704067200")
-                        .queryParam("after", "1672531200")
-                        .queryParam("page", "1")
-                        .queryParam("perPageResults", "30")
-                        .build(UUID.randomUUID()))
-                .exchange()
-                .expectStatus().isAccepted();
+        mockMvc.perform(post(StravaActivityController.FETCH_ACTIVITIES_USER, usuarioId)
+                        .param("before", "1704067200")
+                        .param("after", "1672531200")
+                        .param("page", "1")
+                        .param("perPageResults", "30"))
+        .andExpect(status().isAccepted())
+        .andExpect(header().exists("Location"));        
     }
 }

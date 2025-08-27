@@ -1,160 +1,157 @@
 package com.pablodoblado.personal_sports_back.backend.service;
 
-import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pablodoblado.personal_sports_back.backend.entities.TrainingActivity;
-import com.pablodoblado.personal_sports_back.backend.entities.Usuario;
-import com.pablodoblado.personal_sports_back.backend.entities.enums.TipoActividad;
-import com.pablodoblado.personal_sports_back.backend.services.impls.AemetService;
-import com.pablodoblado.personal_sports_back.backend.services.impls.ApiRateLimiterService;
-
+import com.pablodoblado.personal_sports_back.backend.models.AemetInitialResponseDTO;
+import com.pablodoblado.personal_sports_back.backend.models.AemetObservationsDTO;
+import com.pablodoblado.personal_sports_back.backend.models.AemetValuesDTO;
+import com.pablodoblado.personal_sports_back.backend.services.impls.AemetServiceImpl;
+import com.pablodoblado.personal_sports_back.backend.services.impls.ApiRateLimiterServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
 
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.UUID;
+import java.time.ZoneOffset;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 
-@SpringBootTest
-@WireMockTest(httpPort = 8089)
+@ExtendWith(MockitoExtension.class)
 public class AemetServiceTest {
 
-    @Autowired
-    private AemetService aemetService;
+    @Mock
+    @Qualifier("aemetRestTemplate")
+    private RestTemplate restTemplate;
 
-    @MockitoBean
-    private ApiRateLimiterService apiRateLimiterService;
+    @Mock
+    private ObjectMapper objectMapper;
 
-    @DynamicPropertySource
-    static void setProperties(DynamicPropertyRegistry registry) {
-        registry.add("aemet.api.base-url", () -> "http://localhost:8089");
-        registry.add("identificador.estacion.Alajar", () -> "4560Y");
-    }
+    @Mock
+    private ApiRateLimiterServiceImpl apiRateLimiter;
+
+    @InjectMocks
+    private AemetServiceImpl aemetService;
 
     private TrainingActivity trainingActivityHistorical;
     private TrainingActivity trainingActivityRecent;
 
     @BeforeEach
     void setUp() {
-        when(apiRateLimiterService.checkAemetRateLimit()).thenReturn(Mono.empty());
-
-        Usuario usuario = new Usuario();
-        usuario.setId(UUID.fromString("b2f22e50-321d-4816-a8bd-7a0670b72045"));
-        usuario.setNombre("Test User");
+        ReflectionTestUtils.setField(aemetService, "identificadorEstacionAlajar", "C449I");
 
         trainingActivityHistorical = new TrainingActivity();
         trainingActivityHistorical.setId(1L);
-        trainingActivityHistorical.setUsuario(usuario);
-        trainingActivityHistorical.setNombre("Historical Run");
-        trainingActivityHistorical.setTipo(TipoActividad.RUNNING);
         trainingActivityHistorical.setFechaComienzo(LocalDateTime.now().minusDays(2));
 
         trainingActivityRecent = new TrainingActivity();
         trainingActivityRecent.setId(2L);
-        trainingActivityRecent.setUsuario(usuario);
-        trainingActivityRecent.setNombre("Recent Run");
-        trainingActivityRecent.setTipo(TipoActividad.RUNNING);
         trainingActivityRecent.setFechaComienzo(LocalDateTime.now().minusHours(1));
     }
 
     @Test
-    void shouldGetHistoricalWeatherValues() throws IOException {
-        String initialResponseBody = new String(Files.readAllBytes(Paths.get("src/test/resources/__files/aemetInitialResponse.json")));
-        String valuesResponseBody = new String(Files.readAllBytes(Paths.get("src/test/resources/__files/aemetValues.json")));
+    void shouldGetHistoricalWeatherValues() throws Exception {
+        AemetInitialResponseDTO initialResponse = new AemetInitialResponseDTO();
+        initialResponse.setDatos("http://test.com/data");
+        AemetValuesDTO valuesDTO = new AemetValuesDTO();
+        valuesDTO.setTmed("15,5");
+        valuesDTO.setVelmedia("10,0");
+        valuesDTO.setHrmedia("80,0");
+        valuesDTO.setPrec("0,0");
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'UTC'");
-        String fechaIniStr = trainingActivityHistorical.getFechaComienzo().format(formatter);
-        String fechaFinStr = trainingActivityHistorical.getFechaComienzo().plusDays(1).format(formatter);
+        doNothing().when(apiRateLimiter).checkAemetRateLimit();
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(AemetInitialResponseDTO.class)))
+                .thenReturn(ResponseEntity.ok(initialResponse));
+        when(restTemplate.exchange(eq("http://test.com/data"), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+                .thenReturn(ResponseEntity.ok("[]"));
+        when(objectMapper.readValue(anyString(), any(TypeReference.class)))
+                .thenReturn(Collections.singletonList(valuesDTO));
 
-        stubFor(get(urlPathMatching("/valores/climatologicos/diarios/datos/fechaini/" + fechaIniStr + "/fechafin/" + fechaFinStr + "/estacion/4560Y"))
-                .willReturn(aResponse()
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .withBody(initialResponseBody)
-                        .withStatus(200)));
+        CompletableFuture<TrainingActivity> resultFuture = aemetService.getValoresClimatologicosRangoFechas(trainingActivityHistorical);
+        TrainingActivity result = resultFuture.join();
 
-        stubFor(get(urlEqualTo("/sh/e8b996d7"))
-                .willReturn(aResponse()
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .withBody(valuesResponseBody)
-                        .withStatus(200)));
-
-        Mono<TrainingActivity> result = aemetService.getValoresClimatologicosRangoFechas(trainingActivityHistorical);
-
-        StepVerifier.create(result)
-                .assertNext(activity -> {
-                    assertThat(activity).isNotNull();
-                    assertThat(activity.getTemperatura()).isEqualTo(15.5);
-                    assertThat(activity.getViento()).isEqualTo(10.0);
-                    assertThat(activity.getHumedad()).isEqualTo(80.0);
-                    assertThat(activity.getLluvia()).isFalse();
-                })
-                .verifyComplete();
+        assertThat(result).isNotNull();
+        assertThat(result.getTemperatura()).isEqualTo(15.5);
+        assertThat(result.getViento()).isEqualTo(10.0);
+        assertThat(result.getHumedad()).isEqualTo(80.0);
+        assertThat(result.getLluvia()).isFalse();
     }
 
     @Test
-    void shouldGetRecentWeatherObservations() throws IOException {
-        String initialResponseBody = new String(Files.readAllBytes(Paths.get("src/test/resources/__files/aemetInitialResponse.json")));
-        String observationResponseBody = new String(Files.readAllBytes(Paths.get("src/test/resources/__files/aemetObservations.json")));
+    void shouldGetRecentWeatherObservations() {
+        AemetInitialResponseDTO initialResponse = new AemetInitialResponseDTO();
+        initialResponse.setDatos("http://test.com/data");
+        AemetObservationsDTO observationDTO = new AemetObservationsDTO();
+        observationDTO.setTa(25.0);
+        observationDTO.setVv(5.0);
+        observationDTO.setHr(70.0);
+        observationDTO.setPrec(1.0);
+        observationDTO.setFint(trainingActivityRecent.getFechaComienzo().atOffset(ZoneOffset.UTC).toString());
 
-        stubFor(get(urlEqualTo("/observacion/convencional/datos/estacion/4560Y"))
-                .willReturn(aResponse()
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .withBody(initialResponseBody)
-                        .withStatus(200)));
+        doNothing().when(apiRateLimiter).checkAemetRateLimit();
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(AemetInitialResponseDTO.class)))
+                .thenReturn(ResponseEntity.ok(initialResponse));
+        when(restTemplate.exchange(eq("http://test.com/data"), eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
+                .thenReturn(ResponseEntity.ok(List.of(observationDTO)));
 
-        stubFor(get(urlEqualTo("/sh/e8b996d7"))
-                .willReturn(aResponse()
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .withBody(observationResponseBody)
-                        .withStatus(200)));
+        CompletableFuture<TrainingActivity> resultFuture = aemetService.getValoresClimatologicosRangoFechas(trainingActivityRecent);
+        TrainingActivity result = resultFuture.join();
 
-        Mono<TrainingActivity> result = aemetService.getValoresClimatologicosRangoFechas(trainingActivityRecent);
-
-        StepVerifier.create(result)
-                .assertNext(activity -> {
-                    assertThat(activity).isNotNull();
-                    assertThat(activity.getTemperatura()).isEqualTo(25.0);
-                    assertThat(activity.getViento()).isEqualTo(5.0);
-                    assertThat(activity.getHumedad()).isEqualTo(70.0);
-                    assertThat(activity.getLluvia()).isTrue();
-                })
-                .verifyComplete();
+        assertThat(result).isNotNull();
+        assertThat(result.getTemperatura()).isEqualTo(25.0);
+        assertThat(result.getViento()).isEqualTo(5.0);
+        assertThat(result.getHumedad()).isEqualTo(70.0);
+        assertThat(result.getLluvia()).isTrue();
     }
 
     @Test
-    void shouldReturnActivityWithoutWeather_WhenAemetApiFails() {
-        stubFor(get(anyUrl()).willReturn(aResponse().withStatus(500)));
+    void shouldHandle404NotFoundGracefully() {
+        doNothing().when(apiRateLimiter).checkAemetRateLimit();
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(AemetInitialResponseDTO.class)))
+                .thenThrow(new HttpClientErrorException(HttpStatus.NOT_FOUND));
 
-        Mono<TrainingActivity> result = aemetService.getValoresClimatologicosRangoFechas(trainingActivityRecent);
+        CompletableFuture<TrainingActivity> resultFuture = aemetService.getValoresClimatologicosRangoFechas(trainingActivityRecent);
+        TrainingActivity result = resultFuture.join();
 
-        StepVerifier.create(result)
-                .assertNext(activity -> {
-                    assertThat(activity).isNotNull();
-                    assertThat(activity.getTemperatura()).isNull();
-                    assertThat(activity.getViento()).isNull();
-                    assertThat(activity.getHumedad()).isNull();
-                    assertThat(activity.getLluvia()).isNull();
-                })
-                .verifyComplete();
+        assertThat(result).isNotNull();
+        assertThat(result.getTemperatura()).isNull();
+        assertThat(result.getViento()).isNull();
+        assertThat(result.getHumedad()).isNull();
+        assertThat(result.getLluvia()).isNull();
 
-        WireMock.verify(4, getRequestedFor(anyUrl()));
+        verify(restTemplate, times(1)).exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(AemetInitialResponseDTO.class));
+    }
+
+    @Test
+    void shouldRetryOnTransientApiFailures() {
+        doNothing().when(apiRateLimiter).checkAemetRateLimit();
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(AemetInitialResponseDTO.class)))
+                .thenThrow(new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
+
+        CompletableFuture<TrainingActivity> resultFuture = aemetService.getValoresClimatologicosRangoFechas(trainingActivityRecent);
+        TrainingActivity result = resultFuture.join();
+
+        assertThat(result).isNotNull();
+        assertThat(result.getTemperatura()).isNull();
+
+        verify(restTemplate, times(3)).exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(AemetInitialResponseDTO.class));
     }
 }
