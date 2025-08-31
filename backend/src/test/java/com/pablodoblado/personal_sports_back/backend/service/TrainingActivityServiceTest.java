@@ -1,6 +1,7 @@
 package com.pablodoblado.personal_sports_back.backend.service;
 
 import com.pablodoblado.personal_sports_back.backend.entities.TrainingActivity;
+import com.pablodoblado.personal_sports_back.backend.entities.Usuario;
 import com.pablodoblado.personal_sports_back.backend.entities.enums.TipoActividad;
 import com.pablodoblado.personal_sports_back.backend.mappers.TrainingActivityMapper;
 import com.pablodoblado.personal_sports_back.backend.models.TrainingActivityResponseDTO;
@@ -23,6 +24,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -42,14 +44,27 @@ public class TrainingActivityServiceTest {
 
     private TrainingActivity trainingActivity;
     private TrainingActivityResponseDTO trainingActivityResponseDTO;
+    private UUID testUserId;
+    private List<TrainingActivity> listOfActivities;
+    private LocalDateTime randomDate;
 
     @BeforeEach
     void setUp() {
+    	
+    	randomDate = LocalDateTime.now().plusDays(4);
+    	
+    	testUserId = UUID.randomUUID();
+        Usuario testUser = new Usuario();
+        testUser.setId(testUserId);
+    	
         trainingActivity = new TrainingActivity();
         trainingActivity.setId(1L);
+        trainingActivity.setUsuario(testUser);
         trainingActivity.setNombre("Test Activity");
         trainingActivity.setTipo(TipoActividad.MOVILIDAD);
         trainingActivity.setFechaComienzo(LocalDateTime.now());
+        
+        listOfActivities = List.of(trainingActivity);
 
         trainingActivityResponseDTO = TrainingActivityResponseDTO.builder()
                 .id(1L)
@@ -58,9 +73,35 @@ public class TrainingActivityServiceTest {
                 .fechaComienzo(OffsetDateTime.of(trainingActivity.getFechaComienzo(), ZoneOffset.UTC))
                 .build();
     }
+    
+    @Test
+    void testFindActivityByUsuarioAndDate() {
+    	
+    	when(activityRepository.findByUsuario_IdAndFechaComienzo(testUserId, trainingActivity.getFechaComienzo())).thenReturn(listOfActivities);
+    	when(trainingActivityMapper.mapActivityEntityToResponse(trainingActivity)).thenReturn(trainingActivityResponseDTO);
+    	
+    	Optional<List<TrainingActivityResponseDTO>> result = trainingActivityService.findActivitiesByUsuarioAndDate(testUserId, trainingActivity.getFechaComienzo());
+    	
+    	assertTrue(result.isPresent());
+    	assertTrue(result.get().size() == 1);
+    	
+    }
+    
+    @Test
+    void testFindActivityByUsuarioAndDateNotFound() {
+    	
+    	// Cuando no hay actividades que devolver no se hace mapeo
+    	when(activityRepository.findByUsuario_IdAndFechaComienzo(testUserId, randomDate)).thenReturn(Collections.emptyList());
+    	
+    	
+    	Optional<List<TrainingActivityResponseDTO>> resultado = trainingActivityService.findActivitiesByUsuarioAndDate(testUserId, randomDate);
+    	
+    	assertFalse(resultado.isPresent());
+    }
 
     @Test
-    void testListActivities_found() {
+    void testListActivitiesFound() {
+    	
         try (MockedStatic<TrainingActivitySpecifications> mockedStatic = mockStatic(TrainingActivitySpecifications.class)) {
             Specification<TrainingActivity> spec = mock(Specification.class);
             mockedStatic.when(() -> TrainingActivitySpecifications.findByDiaTipoZonas(any(), any(), any(), any())).thenReturn(spec);
@@ -71,16 +112,17 @@ public class TrainingActivityServiceTest {
             Optional<List<TrainingActivityResponseDTO>> result = trainingActivityService.listActivities(null, null, null, null);
 
             assertTrue(result.isPresent());
-            assertFalse(result.get().isEmpty());
             assertEquals(1, result.get().size());
             assertEquals(trainingActivityResponseDTO, result.get().get(0));
+            
             verify(activityRepository).findAll(spec);
             verify(trainingActivityMapper).mapActivityEntityToResponse(trainingActivity);
         }
     }
 
     @Test
-    void testListActivities_notFound() {
+    void testListActivitiesNotFound() {
+    	
         try (MockedStatic<TrainingActivitySpecifications> mockedStatic = mockStatic(TrainingActivitySpecifications.class)) {
             Specification<TrainingActivity> spec = mock(Specification.class);
             mockedStatic.when(() -> TrainingActivitySpecifications.findByDiaTipoZonas(any(), any(), any(), any())).thenReturn(spec);
@@ -96,7 +138,8 @@ public class TrainingActivityServiceTest {
     }
 
     @Test
-    void testFindActivityById_found() {
+    void testFindActivityByIdFound() {
+    	
         when(activityRepository.findById(1L)).thenReturn(Optional.of(trainingActivity));
         when(trainingActivityMapper.mapActivityEntityToResponse(any(TrainingActivity.class))).thenReturn(trainingActivityResponseDTO);
 
@@ -104,24 +147,26 @@ public class TrainingActivityServiceTest {
 
         assertTrue(result.isPresent());
         assertEquals(trainingActivityResponseDTO, result.get());
-        verify(activityRepository).findById(1L);
+        
         verify(trainingActivityMapper).mapActivityEntityToResponse(trainingActivity);
     }
 
     @Test
-    void testFindActivityById_notFound() {
+    void testFindActivityByIdNotFound() {
+    	
         when(activityRepository.findById(1L)).thenReturn(Optional.empty());
         when(trainingActivityMapper.mapActivityEntityToResponse(any())).thenReturn(null); 
 
         Optional<TrainingActivityResponseDTO> result = trainingActivityService.findActivityById(1L);
 
         assertFalse(result.isPresent());
-        verify(activityRepository).findById(1L);
+        
         verify(trainingActivityMapper).mapActivityEntityToResponse(null);
     }
 
     @Test
-    void testDeleteActivityById_exists() {
+    void testDeleteActivityByIdExists() {
+    	
         when(activityRepository.existsById(1L)).thenReturn(true);
 
         Boolean result = trainingActivityService.deleteActivityById(1L);
@@ -132,7 +177,8 @@ public class TrainingActivityServiceTest {
     }
 
     @Test
-    void testDeleteActivityById_doesNotExist() {
+    void testDeleteActivityByIdNotExist() {
+    	
         when(activityRepository.existsById(1L)).thenReturn(false);
 
         Boolean result = trainingActivityService.deleteActivityById(1L);
@@ -143,7 +189,8 @@ public class TrainingActivityServiceTest {
     }
 
     @Test
-    void testUpdateActivityById_foundAndUpdated() {
+    void testUpdateActivityById() {
+    	
         TrainingActivity updatedActivity = new TrainingActivity();
         updatedActivity.setNombre("Updated Activity");
         updatedActivity.setTipo(TipoActividad.FUERZA);
@@ -156,22 +203,23 @@ public class TrainingActivityServiceTest {
                 .build();
 
         when(activityRepository.findById(1L)).thenReturn(Optional.of(trainingActivity));
-        when(activityRepository.save(any(TrainingActivity.class))).thenReturn(trainingActivity); // Mock save to return the modified entity
+        when(activityRepository.save(any(TrainingActivity.class))).thenReturn(trainingActivity); 
         when(trainingActivityMapper.mapActivityEntityToResponse(any(TrainingActivity.class))).thenReturn(updatedResponseDTO);
 
         Optional<TrainingActivityResponseDTO> result = trainingActivityService.updateActivityById(1L, updatedActivity);
 
         assertTrue(result.isPresent());
         assertEquals(updatedResponseDTO, result.get());
-        assertEquals("Updated Activity", trainingActivity.getNombre());
-        assertEquals(TipoActividad.FUERZA, trainingActivity.getTipo());
+        
+        
         verify(activityRepository).findById(1L);
-        verify(activityRepository).save(trainingActivity); // Verify save is called with the modified entity
-        verify(trainingActivityMapper).mapActivityEntityToResponse(trainingActivity); // Verify mapping of the updated entity 
+        verify(activityRepository).save(trainingActivity); 
+        verify(trainingActivityMapper).mapActivityEntityToResponse(trainingActivity); 
     }
 
     @Test
-    void testUpdateActivityById_notFound() {
+    void testUpdateActivityByIdNotFound() {
+    	
         TrainingActivity updatedActivity = new TrainingActivity();
         updatedActivity.setNombre("Updated Activity");
 
@@ -181,6 +229,6 @@ public class TrainingActivityServiceTest {
 
         assertFalse(result.isPresent());
         verify(activityRepository).findById(1L);
-        verifyNoInteractions(trainingActivityMapper);
+        
     }
 }

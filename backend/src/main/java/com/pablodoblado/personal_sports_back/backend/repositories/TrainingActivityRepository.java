@@ -1,7 +1,9 @@
-package com.pablodoblado.personal_sports_back.backend.repositories;
+ package com.pablodoblado.personal_sports_back.backend.repositories;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -14,12 +16,16 @@ public interface TrainingActivityRepository extends JpaRepository<TrainingActivi
 	
 	Optional<TrainingActivity> findByUsuarioAndTipo(Usuario usuario, TipoActividad tipo);
 	
-	Optional<TrainingActivity> findByFechaComienzo(LocalDateTime fechaComienzo);
+	// Actualizar actividades diarias
+	List<TrainingActivity> findByUsuario_IdAndFechaComienzo(UUID idUsuario, LocalDateTime fechaComienzo);
 		
 	Optional<TrainingActivity> findAllByTipoAndFechaComienzoAndPulsoMedioBetween(TipoActividad tipoActividad, LocalDateTime fechaComienzo, Double rangoMinimo, Double rangoMaximo);
 	
 	Optional<TrainingActivity> findByUsuarioAndDistanciaBetween(Usuario usuario, Double distanciaMin, Double distanciaMax);
 	
 	void deleteByFechaComienzo(LocalDateTime fechaComienzo);
+	
+	// Filtrar actividades por año, mes, semana
+	List<TrainingActivity> findAllByUsuario_IdAndFechaComienzoBetween(UUID idUsuario, LocalDateTime fechaIni, LocalDateTime fechaFin);
 
 }

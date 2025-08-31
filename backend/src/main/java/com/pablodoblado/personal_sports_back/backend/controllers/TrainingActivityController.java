@@ -3,6 +3,7 @@ package com.pablodoblado.personal_sports_back.backend.controllers;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -36,6 +37,8 @@ public class TrainingActivityController {
 	
 	public static final String TRAINING_ID_PATH = TRAINING_PATH + "/{id}";
 	
+	public static final String TRAINING_USER_ID_PATH = TRAINING_PATH + "/usuario/{idUsuario}";
+	
 	public static final String TRAINING_UPDATE_PATH = TRAINING_PATH + "/update/{id}";
 	
 	public static final String TRAINING_DELETE_PATH = TRAINING_PATH + "/delete/{id}";
@@ -47,6 +50,19 @@ public class TrainingActivityController {
 			@Qualifier("trainingActivityMapperImpl") TrainingActivityMapper trainingActivityMapper) {
 		this.trainingActivityService = trainingActivityService;
 		this.trainingActivityMapper = trainingActivityMapper;
+	}
+	
+	
+	/** 
+	 * Endpoint Method to return the current day activities of an athlete
+	 * @throws NotFoundException 
+	 * */
+	@GetMapping(TRAINING_USER_ID_PATH)
+	public List<TrainingActivityResponseDTO> getActivitiesForUsuarioAndFecha(@PathVariable("idUsuario") UUID idUsuario, 
+			@RequestParam(required = true) LocalDateTime fecha) throws NotFoundException {
+		
+		return trainingActivityService.findActivitiesByUsuarioAndDate(idUsuario, fecha).orElseThrow(NotFoundException::new);
+		
 	}
 	
 	@GetMapping(TRAINING_PATH)

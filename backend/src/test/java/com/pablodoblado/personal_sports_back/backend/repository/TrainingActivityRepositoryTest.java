@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,10 +66,18 @@ public class TrainingActivityRepositoryTest {
     }
 
     @Test
-    void testFindByFechaComienzo() {
-        TrainingActivity foundActivity = trainingActivityRepository.findByFechaComienzo(startTime).orElse(null);
+    void testFindByUsuarioAndFechaComienzo() {
+    	
+        List<TrainingActivity> foundActivities = trainingActivityRepository.findByUsuario_IdAndFechaComienzo(usuario.getId(), trainingActivity.getFechaComienzo());
 
-        assertThat(foundActivity).isNotNull();
+        assertThat(foundActivities)
+        .isNotNull()
+        .isNotEmpty()
+        .hasSize(1);
+        
+        TrainingActivity foundActivity = foundActivities.get(0);
+        
+        
         assertThat(foundActivity.getId()).isEqualTo(trainingActivity.getId());
         assertThat(foundActivity.getFechaComienzo()).isEqualTo(trainingActivity.getFechaComienzo());
     }
@@ -86,12 +95,17 @@ public class TrainingActivityRepositoryTest {
 
     @Test
     void testDeleteByFechaComienzo() {
+    	
+    	
+        List<TrainingActivity> activities = trainingActivityRepository.findByUsuario_IdAndFechaComienzo(usuario.getId(), trainingActivity.getFechaComienzo());
+        
+        assertThat(activities).isNotEmpty();
+        assertThat(activities).hasSize(1);
 
-        assertThat(trainingActivityRepository.findByFechaComienzo(startTime)).isPresent();
+        trainingActivityRepository.deleteByFechaComienzo(trainingActivity.getFechaComienzo());
 
-        trainingActivityRepository.deleteByFechaComienzo(startTime);
-
-        assertThat(trainingActivityRepository.findByFechaComienzo(startTime)).isNotPresent();
+        List<TrainingActivity> deletedActivities = trainingActivityRepository.findByUsuario_IdAndFechaComienzo(usuario.getId(), trainingActivity.getFechaComienzo());
+        assertThat(deletedActivities).isEmpty();
     }
 
 }

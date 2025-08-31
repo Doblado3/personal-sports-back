@@ -9,6 +9,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -52,28 +53,93 @@ public class TrainingActivityControllerTest {
 	@MockitoBean(name = "trainingActivityMapperImpl")
 	private TrainingActivityMapper trainingActivityMapper;
 	
-	public static final UUID testId = UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
+	private UUID testId;
+	private Long mockId1;
+	private Long mockId2;
+	private LocalDateTime fecha;
 	
-	public static final Long mockId1 = 1L;
-	public static final Long mockId2 = 2L;
+	private TrainingActivityRequestDTO request;
+	private TrainingActivityResponseDTO response;
+	private TrainingActivityResponseDTO response2;
+	private List<TrainingActivityResponseDTO> list;
 	
-	@Test
-	void testUpdateTrainingActivity() throws Exception {
+	@BeforeEach
+	void setUp() {
 		
-		TrainingActivityRequestDTO request = TrainingActivityRequestDTO.builder()
+		testId = UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
+		mockId1 = 1L;
+		mockId2 = 2L;
+		fecha = LocalDateTime.now();
+		
+		request = TrainingActivityRequestDTO.builder()
 				.tipo(TipoActividad.MOVILIDAD)
 				.usuarioId(testId)
 				.nombre("usuario test")
-				.fechaComienzo(OffsetDateTime.of(LocalDate.now(), LocalTime.MIN, ZoneOffset.UTC))
+				.pulsoMedio(123.2)
+				.fechaComienzo(OffsetDateTime.of(fecha.toLocalDate(), LocalTime.MIN, ZoneOffset.UTC))
 				.build();
 		
-		TrainingActivityResponseDTO response = TrainingActivityResponseDTO.builder()
+		response = TrainingActivityResponseDTO.builder()
 				.tipo(TipoActividad.MOVILIDAD)
 				.id(mockId1)
 				.usuarioId(testId)
 				.nombre("usuario test")
-				.fechaComienzo(OffsetDateTime.of(LocalDate.now(), LocalTime.MIN, ZoneOffset.UTC))
+				.pulsoMedio(123.2)
+				.fechaComienzo(OffsetDateTime.of(fecha.toLocalDate(), LocalTime.MIN, ZoneOffset.UTC))
 				.build();
+		
+		response2 = TrainingActivityResponseDTO.builder()
+                .fechaComienzo(OffsetDateTime.of(fecha.toLocalDate(), LocalTime.MIN, ZoneOffset.UTC))
+                .tipo(TipoActividad.MOVILIDAD)
+                .id(mockId2)
+                .nombre("usuario test 2")
+                .pulsoMedio(145.0)
+                .build();
+		
+		list = List.of(response, response2);
+	}
+	
+	@Test
+	void testGetActivitiesForUsuarioAndFecha() throws Exception {
+		
+		given(trainingActivityService.findActivitiesByUsuarioAndDate(testId, fecha)).willReturn(Optional.of(list));
+		
+		mockMvc.perform(get(TrainingActivityController.TRAINING_USER_ID_PATH, testId)
+				.queryParam("fecha", fecha.toString())
+				.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk())
+				.andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.length()", is(list.size())));
+		
+	}
+	
+	@Test
+	void testGetActivitiesForUsuarioAndFechaNotFound() throws Exception {
+		
+		LocalDateTime random = LocalDateTime.now().plusDays(5);
+		
+		given(trainingActivityService.findActivitiesByUsuarioAndDate(testId, random)).willReturn(Optional.empty());
+		
+		mockMvc.perform(get(TrainingActivityController.TRAINING_USER_ID_PATH, testId)
+				.queryParam("fecha", random.toString())
+				.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isNotFound());
+	}
+	
+	@Test
+	void testGetActivitiesForUsuarioAndFechaBadRequest() throws Exception {
+		
+		given(trainingActivityService.findActivitiesByUsuarioAndDate(testId, fecha)).willReturn(Optional.of(list));
+				
+				mockMvc.perform(get(TrainingActivityController.TRAINING_USER_ID_PATH, testId)
+						.accept(MediaType.APPLICATION_JSON))
+						.andExpect(status().isBadRequest());
+					
+	}
+	
+	@Test
+	void testUpdateTrainingActivity() throws Exception {
+		
 		
 		given(trainingActivityMapper.mapActivityRequestToEntity(any(TrainingActivityRequestDTO.class))).willReturn(new TrainingActivity());
 		given(trainingActivityService.updateActivityById(any(Long.class), any(TrainingActivity.class))).willReturn(Optional.of(response));
@@ -90,13 +156,7 @@ public class TrainingActivityControllerTest {
 	
 	@Test
 	void testUpdateTrainingActivityNotFound() throws Exception {
-		
-		TrainingActivityRequestDTO request = TrainingActivityRequestDTO.builder()
-				.tipo(TipoActividad.MOVILIDAD)
-				.usuarioId(testId)
-				.nombre("usuario test")
-				.fechaComienzo(OffsetDateTime.of(LocalDate.now(), LocalTime.MIN, ZoneOffset.UTC))
-				.build();
+
 		
 		given(trainingActivityMapper.mapActivityRequestToEntity(any(TrainingActivityRequestDTO.class))).willReturn(new TrainingActivity());
 		given(trainingActivityService.updateActivityById(any(Long.class), any(TrainingActivity.class))).willReturn(Optional.empty());
@@ -112,14 +172,6 @@ public class TrainingActivityControllerTest {
 	void testGetActivityById() throws Exception {
 		
 		
-		TrainingActivityResponseDTO response = TrainingActivityResponseDTO.builder()
-				.tipo(TipoActividad.MOVILIDAD)
-				.id(mockId1)
-				.usuarioId(testId)
-				.nombre("usuario test")
-				.fechaComienzo(OffsetDateTime.of(LocalDate.now(), LocalTime.MIN, ZoneOffset.UTC))
-				.build();
-		
 		given(trainingActivityService.findActivityById(response.getId())).willReturn(Optional.of(response));
 		
 		mockMvc.perform(get(TrainingActivityController.TRAINING_ID_PATH, response.getId())
@@ -133,14 +185,6 @@ public class TrainingActivityControllerTest {
 	void testGetActivityByIdNotFound() throws Exception {
 		
 		
-		TrainingActivityResponseDTO response = TrainingActivityResponseDTO.builder()
-				.tipo(TipoActividad.MOVILIDAD)
-				.id(mockId1)
-				.usuarioId(testId)
-				.nombre("usuario test")
-				.fechaComienzo(OffsetDateTime.of(LocalDate.now(), LocalTime.MIN, ZoneOffset.UTC))
-				.build();
-		
 		given(trainingActivityService.findActivityById(response.getId())).willReturn(Optional.empty());
 		
 		mockMvc.perform(get(TrainingActivityController.TRAINING_ID_PATH, response.getId())
@@ -151,14 +195,6 @@ public class TrainingActivityControllerTest {
 	
 	@Test
 	void testDeleteActivityById() throws Exception {
-		
-		TrainingActivityResponseDTO response = TrainingActivityResponseDTO.builder()
-				.tipo(TipoActividad.MOVILIDAD)
-				.id(mockId1)
-				.usuarioId(testId)
-				.nombre("usuario test")
-				.fechaComienzo(OffsetDateTime.of(LocalDate.now(), LocalTime.MIN, ZoneOffset.UTC))
-				.build();
 		
 		given(trainingActivityService.deleteActivityById(response.getId())).willReturn(true);
 		
@@ -171,14 +207,6 @@ public class TrainingActivityControllerTest {
 	@Test 
 	void testDeleteActivityByIdNotFound() throws Exception {
 		
-		TrainingActivityResponseDTO response = TrainingActivityResponseDTO.builder()
-				.tipo(TipoActividad.MOVILIDAD)
-				.id(mockId1)
-				.usuarioId(testId)
-				.nombre("usuario test")
-				.fechaComienzo(OffsetDateTime.of(LocalDate.now(), LocalTime.MIN, ZoneOffset.UTC))
-				.build();
-		
 		given(trainingActivityService.deleteActivityById(response.getId())).willReturn(false);
 		
 		mockMvc.perform(delete(TrainingActivityController.TRAINING_DELETE_PATH, response.getId())
@@ -189,31 +217,13 @@ public class TrainingActivityControllerTest {
 	@Test
 	void testListActivitiesByParams() throws Exception {
 		
-		TrainingActivityResponseDTO response1 = TrainingActivityResponseDTO.builder()
-				.tipo(TipoActividad.MOVILIDAD)
-				.id(mockId1)
-				.usuarioId(testId)
-				.nombre("usuario test")
-				.pulsoMedio(123.2)
-				.fechaComienzo(OffsetDateTime.of(LocalDate.now(), LocalTime.MIN, ZoneOffset.UTC))
-				.build();
-		
-		TrainingActivityResponseDTO response2 = TrainingActivityResponseDTO.builder()
-                .fechaComienzo(OffsetDateTime.of(LocalDate.now(), LocalTime.MIN, ZoneOffset.UTC))
-                .tipo(TipoActividad.MOVILIDAD)
-                .id(mockId2)
-                .nombre("usuario test 2")
-                .pulsoMedio(145.0)
-                .build();
-		
-		List<TrainingActivityResponseDTO> list = List.of(response1,response2);
 
 		
-		given(trainingActivityService.listActivities(response1.getFechaComienzo().toLocalDateTime(), response1.getTipo(), 120.0, 150.0)).willReturn(Optional.of(list));
+		given(trainingActivityService.listActivities(response.getFechaComienzo().toLocalDateTime(), response.getTipo(), 120.0, 150.0)).willReturn(Optional.of(list));
 		
 		mockMvc.perform(get(TrainingActivityController.TRAINING_PATH)
-				.queryParam("dia", response1.getFechaComienzo().toLocalDateTime().toString())
-				.queryParam("tipo", response1.getTipo().toString())
+				.queryParam("dia", response.getFechaComienzo().toLocalDateTime().toString())
+				.queryParam("tipo", response.getTipo().toString())
 				.queryParam("rangoZonaMin", "120.0")
 				.queryParam("rangoZonaMax", "150.0"))
 	        .andExpect(status().isOk())
@@ -225,30 +235,12 @@ public class TrainingActivityControllerTest {
 	@Test
 	void testListActivitiesByParamsNotFound() throws Exception {
 		
-		TrainingActivityResponseDTO response1 = TrainingActivityResponseDTO.builder()
-				.tipo(TipoActividad.SENDERISMO)
-				.id(mockId1)
-				.usuarioId(testId)
-				.nombre("usuario test")
-				.pulsoMedio(123.2)
-				.fechaComienzo(OffsetDateTime.of(LocalDate.now(), LocalTime.MIN, ZoneOffset.UTC))
-				.build();
-		
-		TrainingActivityResponseDTO response2 = TrainingActivityResponseDTO.builder()
-                .fechaComienzo(OffsetDateTime.of(LocalDate.now(), LocalTime.MIN, ZoneOffset.UTC))
-                .tipo(TipoActividad.FUERZA)
-                .id(mockId2)
-                .nombre("usuario test 2")
-                .pulsoMedio(145.0)
-                .build();
-		
-		List<TrainingActivityResponseDTO> list = List.of(response1,response2);
 
 		
-		given(trainingActivityService.listActivities(response1.getFechaComienzo().toLocalDateTime(), TipoActividad.RIDE, 120.0, 150.0)).willReturn(Optional.empty());
+		given(trainingActivityService.listActivities(response.getFechaComienzo().toLocalDateTime(), TipoActividad.RIDE, 120.0, 150.0)).willReturn(Optional.empty());
 		
 		mockMvc.perform(get(TrainingActivityController.TRAINING_PATH)
-				.queryParam("dia", response1.getFechaComienzo().toLocalDateTime().toString())
+				.queryParam("dia", response.getFechaComienzo().toLocalDateTime().toString())
 				.queryParam("tipo", TipoActividad.RIDE.toString())
 				.queryParam("rangoZonaMin", "120.0")
 				.queryParam("rangoZonaMax", "150.0"))

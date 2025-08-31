@@ -3,6 +3,7 @@ package com.pablodoblado.personal_sports_back.backend.services.impls;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.data.jpa.domain.Specification;
@@ -109,6 +110,33 @@ public class TrainingActivityServiceImpl implements TrainingActivityService {
 					return trainingActivityMapper.mapActivityEntityToResponse(savedActivity);
 					
 				});
+	}
+	
+	@Override
+	public Optional<List<TrainingActivityResponseDTO>> findActivitiesByUsuarioAndDate(UUID idUsuario, LocalDateTime fecha) {
+		
+		List<TrainingActivity> activitiesList = activityRepository.findByUsuario_IdAndFechaComienzo(idUsuario, fecha);
+		
+	    if (activitiesList.isEmpty()) {
+	        return Optional.empty();
+	    }
+	    
+	    
+	    List<TrainingActivityResponseDTO> resultado = activitiesList.stream()
+	            .map(activity -> trainingActivityMapper.mapActivityEntityToResponse(activity))
+	            .collect(Collectors.toList());
+	    
+	    return Optional.of(resultado);
+		
+	}
+
+
+
+	@Override
+	public Optional<List<TrainingActivityResponseDTO>> findActivitiesByUsuarioDateRange(UUID idUsuario,
+			LocalDateTime fechaIni, LocalDateTime fechaFin) {
+		// TODO Auto-generated method stub
+		return Optional.empty();
 	}
 
 }
