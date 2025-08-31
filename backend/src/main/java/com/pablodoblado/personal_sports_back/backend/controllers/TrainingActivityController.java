@@ -37,7 +37,9 @@ public class TrainingActivityController {
 	
 	public static final String TRAINING_ID_PATH = TRAINING_PATH + "/{id}";
 	
-	public static final String TRAINING_USER_ID_PATH = TRAINING_PATH + "/usuario/{idUsuario}";
+	public static final String TRAINING_USER_ID_DATE_PATH = TRAINING_PATH + "/usuario/date/{idUsuario}";
+	
+	public static final String TRAINING_USER_ID_DATE_RANGE_PATH = TRAINING_PATH + "/usuario/dateRange/{idUsuario}";
 	
 	public static final String TRAINING_UPDATE_PATH = TRAINING_PATH + "/update/{id}";
 	
@@ -52,12 +54,36 @@ public class TrainingActivityController {
 		this.trainingActivityMapper = trainingActivityMapper;
 	}
 	
+	/** 
+	 * Endpoint Method to return the weekly, monthly or yearly uploaded activities of an athlete
+	 * @throws NotFoundException 
+	 * 
+	 * @param idUsuario: The athlete(user) id
+	 * @param fechaIni: Usually the first day of the week, month or year, but exceptionally could be used for other days
+	 * @param fechaFin: Usually the last day of the week, month or year, but exceptionally could be used for other days
+	 * 
+	 * @return List of TrainingActivityResponseDTO objects
+	 * */
+	@GetMapping(TRAINING_USER_ID_DATE_RANGE_PATH)
+	public List<TrainingActivityResponseDTO> getActivitiesForUsuarioAndDateRange(@PathVariable("idUsuario") UUID idUsuario, 
+			@RequestParam(required = true) LocalDateTime fechaIni,
+			@RequestParam(required = true) LocalDateTime fechaFin) throws NotFoundException {
+		
+		return trainingActivityService.findActivitiesByUsuarioDateRange(idUsuario, fechaIni, fechaFin).orElseThrow(NotFoundException::new);
+		
+	}
+	
 	
 	/** 
 	 * Endpoint Method to return the current day activities of an athlete
 	 * @throws NotFoundException 
+	 * 
+	 * @param idUsuario: The athlete(user) id
+	 * @param fecha: Usually the current day Date, but exceptionally could be used for other days
+	 * 
+	 * @return List of TrainingActivityResponseDTO objects
 	 * */
-	@GetMapping(TRAINING_USER_ID_PATH)
+	@GetMapping(TRAINING_USER_ID_DATE_PATH)
 	public List<TrainingActivityResponseDTO> getActivitiesForUsuarioAndFecha(@PathVariable("idUsuario") UUID idUsuario, 
 			@RequestParam(required = true) LocalDateTime fecha) throws NotFoundException {
 		

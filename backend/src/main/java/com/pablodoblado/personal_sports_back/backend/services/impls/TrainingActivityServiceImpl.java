@@ -135,8 +135,19 @@ public class TrainingActivityServiceImpl implements TrainingActivityService {
 	@Override
 	public Optional<List<TrainingActivityResponseDTO>> findActivitiesByUsuarioDateRange(UUID idUsuario,
 			LocalDateTime fechaIni, LocalDateTime fechaFin) {
-		// TODO Auto-generated method stub
-		return Optional.empty();
+		
+		List<TrainingActivity> activitiesList = activityRepository.findAllByUsuario_IdAndFechaComienzoBetween(idUsuario, fechaIni, fechaFin);
+		
+		if(activitiesList.isEmpty()) {
+			
+			return Optional.empty();
+		}
+		
+		List<TrainingActivityResponseDTO> resultado = activitiesList.stream()
+				.map(activity -> trainingActivityMapper.mapActivityEntityToResponse(activity))
+				.collect(Collectors.toList());
+		
+		return Optional.of(resultado);
 	}
 
 }

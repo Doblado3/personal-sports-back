@@ -100,11 +100,26 @@ public class TrainingActivityControllerTest {
 	}
 	
 	@Test
+	void testGetActivitiesForUsuarioAndDateRange() throws Exception {
+		
+		given(trainingActivityService.findActivitiesByUsuarioDateRange(testId, fecha.minusDays(2), fecha.plusDays(2))).willReturn(Optional.of(list));
+		
+		mockMvc.perform(get(TrainingActivityController.TRAINING_USER_ID_DATE_RANGE_PATH, testId)
+				.queryParam("fechaIni", fecha.minusDays(2).toString())
+				.queryParam("fechaFin", fecha.plusDays(2).toString())
+				.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk())
+				.andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.length()", is(list.size())));
+		
+	}
+	
+	@Test
 	void testGetActivitiesForUsuarioAndFecha() throws Exception {
 		
 		given(trainingActivityService.findActivitiesByUsuarioAndDate(testId, fecha)).willReturn(Optional.of(list));
 		
-		mockMvc.perform(get(TrainingActivityController.TRAINING_USER_ID_PATH, testId)
+		mockMvc.perform(get(TrainingActivityController.TRAINING_USER_ID_DATE_PATH, testId)
 				.queryParam("fecha", fecha.toString())
 				.accept(MediaType.APPLICATION_JSON))
 				.andExpect(status().isOk())
@@ -120,7 +135,7 @@ public class TrainingActivityControllerTest {
 		
 		given(trainingActivityService.findActivitiesByUsuarioAndDate(testId, random)).willReturn(Optional.empty());
 		
-		mockMvc.perform(get(TrainingActivityController.TRAINING_USER_ID_PATH, testId)
+		mockMvc.perform(get(TrainingActivityController.TRAINING_USER_ID_DATE_PATH, testId)
 				.queryParam("fecha", random.toString())
 				.accept(MediaType.APPLICATION_JSON))
 				.andExpect(status().isNotFound());
@@ -131,7 +146,7 @@ public class TrainingActivityControllerTest {
 		
 		given(trainingActivityService.findActivitiesByUsuarioAndDate(testId, fecha)).willReturn(Optional.of(list));
 				
-				mockMvc.perform(get(TrainingActivityController.TRAINING_USER_ID_PATH, testId)
+				mockMvc.perform(get(TrainingActivityController.TRAINING_USER_ID_DATE_PATH, testId)
 						.accept(MediaType.APPLICATION_JSON))
 						.andExpect(status().isBadRequest());
 					

@@ -64,6 +64,35 @@ public class TrainingActivityRepositoryTest {
         assertThat(foundActivity.getId()).isEqualTo(trainingActivity.getId());
         assertThat(foundActivity.getNombre()).isEqualTo(trainingActivity.getNombre());
     }
+	
+	@Test
+	void testFindByUsuarioAndDateRange() {
+		
+		List<TrainingActivity> foundActivities = trainingActivityRepository.findAllByUsuario_IdAndFechaComienzoBetween(usuario.getId(), trainingActivity.getFechaComienzo().minusDays(2),
+				trainingActivity.getFechaComienzo().plusDays(2));
+		
+		assertThat(foundActivities)
+        .isNotNull()
+        .isNotEmpty()
+        .hasSize(1);
+        
+        TrainingActivity foundActivity = foundActivities.get(0);
+        
+        
+        assertThat(foundActivity.getId()).isEqualTo(trainingActivity.getId());
+        assertThat(foundActivity.getFechaComienzo()).isEqualTo(trainingActivity.getFechaComienzo());
+	}
+	
+	@Test
+	void testFindByUsuarioAndDateRangeEmpty() {
+		
+		List<TrainingActivity> foundActivities = trainingActivityRepository.findAllByUsuario_IdAndFechaComienzoBetween(usuario.getId(), trainingActivity.getFechaComienzo().plusDays(2),
+				trainingActivity.getFechaComienzo().plusDays(5));
+		
+		assertThat(foundActivities)
+        .isEmpty();
+       
+	}
 
     @Test
     void testFindByUsuarioAndFechaComienzo() {

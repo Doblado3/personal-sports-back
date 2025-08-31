@@ -75,7 +75,36 @@ public class TrainingActivityServiceTest {
     }
     
     @Test
-    void testFindActivityByUsuarioAndDate() {
+    void testFindActivitiesByUsuarioAndDateRange() {
+    	
+    	when(activityRepository.findAllByUsuario_IdAndFechaComienzoBetween(testUserId, trainingActivity.getFechaComienzo().minusDays(2),
+    			trainingActivity.getFechaComienzo().plusDays(2))).thenReturn(listOfActivities);
+    	
+    	when(trainingActivityMapper.mapActivityEntityToResponse(trainingActivity)).thenReturn(trainingActivityResponseDTO);
+    	
+    	Optional<List<TrainingActivityResponseDTO>> result = trainingActivityService.findActivitiesByUsuarioDateRange(testUserId, trainingActivity.getFechaComienzo().minusDays(2),
+    			trainingActivity.getFechaComienzo().plusDays(2));
+    	
+    	assertTrue(result.isPresent());
+    	assertTrue(result.get().size() == 1);
+    }
+    
+    @Test
+    void testFindActivitiesByUsuarioAndDateRangeNotFound() {
+    	
+    	when(activityRepository.findAllByUsuario_IdAndFechaComienzoBetween(testUserId, randomDate,
+    			randomDate.plusDays(10))).thenReturn(Collections.emptyList());
+    	
+    	Optional<List<TrainingActivityResponseDTO>> result = trainingActivityService.findActivitiesByUsuarioDateRange(testUserId, randomDate,
+    			randomDate.plusDays(10));
+    	
+    	assertFalse(result.isPresent());
+    	
+    	
+    }
+    
+    @Test
+    void testFindActivitiesByUsuarioAndDate() {
     	
     	when(activityRepository.findByUsuario_IdAndFechaComienzo(testUserId, trainingActivity.getFechaComienzo())).thenReturn(listOfActivities);
     	when(trainingActivityMapper.mapActivityEntityToResponse(trainingActivity)).thenReturn(trainingActivityResponseDTO);
@@ -88,7 +117,7 @@ public class TrainingActivityServiceTest {
     }
     
     @Test
-    void testFindActivityByUsuarioAndDateNotFound() {
+    void testFindActivitiesByUsuarioAndDateNotFound() {
     	
     	// Cuando no hay actividades que devolver no se hace mapeo
     	when(activityRepository.findByUsuario_IdAndFechaComienzo(testUserId, randomDate)).thenReturn(Collections.emptyList());
