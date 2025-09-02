@@ -4,14 +4,20 @@ import com.pablodoblado.personal_sports_back.backend.controllers.UsuarioControll
 import com.pablodoblado.personal_sports_back.backend.entities.Usuario;
 import com.pablodoblado.personal_sports_back.backend.models.UsuarioRequestDTO;
 import com.pablodoblado.personal_sports_back.backend.repositories.UsuarioRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.data.crossstore.ChangeSetPersister.NotFoundException;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.Rollback;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,8 +26,14 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@Testcontainers
+@ActiveProfiles("localpostgresql")
 @SpringBootTest
 public class UsuarioControllerIT {
+
+    @Container
+    @ServiceConnection
+    private static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17-alpine");
 
     @Autowired
     UsuarioRepository usuarioRepository;
@@ -29,13 +41,26 @@ public class UsuarioControllerIT {
     @Autowired
     UsuarioController usuarioController;
 
+    private Usuario testUser;
+
+    @BeforeEach
+    void setUp() {
+        usuarioRepository.deleteAll();
+        testUser = usuarioRepository.save(Usuario.builder()
+                .nombre("Test User Setup")
+                .email("test.setup-" + UUID.randomUUID() + "@example.com")
+                .password("password")
+                .fechaNacimiento(LocalDateTime.now().minusYears(30))
+                .build());
+    }
+
     @Transactional
     @Rollback
     @Test
     void testSaveUsuario() {
         UsuarioRequestDTO request = UsuarioRequestDTO.builder()
                 .nombre("Test User Save")
-                .email("test.save@example.com")
+                .email("test.save-" + UUID.randomUUID() + "@example.com")
                 .password("password")
                 .fechaNacimiento(LocalDateTime.now().minusYears(20))
                 .build();
@@ -55,13 +80,14 @@ public class UsuarioControllerIT {
     @Test
     void testFindAll() {
         List<?> list = (List<?>) usuarioController.findAll().getBody();
-        assertThat(list.size()).isGreaterThan(0);
+        
+        assertThat(list.size()).isEqualTo(1);
     }
 
     @Test
     void testFindById() throws NotFoundException {
-        Usuario usuario = usuarioRepository.findAll().get(0);
-        ResponseEntity<?> responseEntity = usuarioController.getUserById(usuario.getId());
+        
+        ResponseEntity<?> responseEntity = usuarioController.getUserById(testUser.getId());
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatusCode.valueOf(200));
     }
 
@@ -76,19 +102,18 @@ public class UsuarioControllerIT {
     @Rollback
     @Test
     void testUpdateUsuario() throws NotFoundException {
-    	
-        Usuario usuario = usuarioRepository.findAll().get(0);
+        
         UsuarioRequestDTO request = UsuarioRequestDTO.builder()
                 .nombre("UPDATED")
-                .email(usuario.getEmail())
-                .password(usuario.getPassword())
-                .fechaNacimiento(usuario.getFechaNacimiento())
+                .email(testUser.getEmail())
+                .password(testUser.getPassword())
+                .fechaNacimiento(testUser.getFechaNacimiento())
                 .build();
 
-        ResponseEntity<?> responseEntity = usuarioController.updateUsuarioById(usuario.getId(), request);
+        ResponseEntity<?> responseEntity = usuarioController.updateUsuarioById(testUser.getId(), request);
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatusCode.valueOf(204));
 
-        Usuario updatedUsuario = usuarioRepository.findById(usuario.getId()).get();
+        Usuario updatedUsuario = usuarioRepository.findById(testUser.getId()).get();
         assertThat(updatedUsuario.getNombre()).isEqualTo("UPDATED");
     }
 
@@ -103,10 +128,10 @@ public class UsuarioControllerIT {
     @Rollback
     @Test
     void testDeleteUsuario() throws NotFoundException {
-        Usuario usuario = usuarioRepository.findAll().get(0);
-        ResponseEntity<?> responseEntity = usuarioController.delete(usuario.getId());
+        
+        ResponseEntity<?> responseEntity = usuarioController.delete(testUser.getId());
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatusCode.valueOf(204));
-        assertThat(usuarioRepository.findById(usuario.getId())).isEmpty();
+        assertThat(usuarioRepository.findById(testUser.getId())).isEmpty();
     }
 
     @Test

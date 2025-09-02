@@ -6,14 +6,21 @@ import com.pablodoblado.personal_sports_back.backend.entities.Usuario;
 import com.pablodoblado.personal_sports_back.backend.models.MetricaSaludRequestDTO;
 import com.pablodoblado.personal_sports_back.backend.repositories.MetricaSaludRepository;
 import com.pablodoblado.personal_sports_back.backend.repositories.UsuarioRepository;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.data.crossstore.ChangeSetPersister.NotFoundException;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.Rollback;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -22,8 +29,14 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+@Testcontainers
+@ActiveProfiles("localpostgresql")
 @SpringBootTest
 public class MetricaSaludControllerIT {
+	
+	@Container
+    @ServiceConnection
+    private static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17-alpine");
 
     @Autowired
     MetricaSaludRepository metricaSaludRepository;
@@ -33,9 +46,34 @@ public class MetricaSaludControllerIT {
 
     @Autowired
     MetricaSaludController metricaSaludController;
+    
+    private MetricaSalud initialMetrica;
+    private Usuario user;
+    private LocalDate fechaRegistro;
+    
+    @BeforeEach
+    void setUp() {
+    	
+    	fechaRegistro = LocalDate.now();
+    	
+    	user = usuarioRepository.save(Usuario.builder()
+                .nombre("Test User Save")
+                .email("test.setup-" + UUID.randomUUID() + "@example.com")
+                .password("password")
+                .fechaNacimiento(LocalDateTime.now().minusYears(20))
+                .build());
+    	
+    	initialMetrica = metricaSaludRepository.save(MetricaSalud.builder()
+                .usuario(user)
+                .fechaRegistro(fechaRegistro)
+                .calidadSueno("Buena")
+                .build());
+    	
+    }
 
     @Test
     void testUpdateMetricaNotFound() {
+    	
         UUID nonExistentUserId = UUID.randomUUID();
         MetricaSaludRequestDTO request = MetricaSaludRequestDTO.builder()
                 .fechaRegistro(LocalDate.now())
@@ -51,16 +89,10 @@ public class MetricaSaludControllerIT {
     @Rollback
     @Test
     void testSaveMetricaDiaria() throws NotFoundException {
-        Usuario user = usuarioRepository.save(Usuario.builder()
-                .nombre("Test User Save")
-                .email("test.save@example.com")
-                .password("password")
-                .fechaNacimiento(LocalDateTime.now().minusYears(20))
-                .build());
+        
 
-        LocalDate fechaRegistro = LocalDate.now();
         MetricaSaludRequestDTO request = MetricaSaludRequestDTO.builder()
-                .fechaRegistro(fechaRegistro)
+                .fechaRegistro(fechaRegistro.plusDays(3))
                 .calidadSueno("Buena")
                 .build();
 
@@ -84,20 +116,7 @@ public class MetricaSaludControllerIT {
     @Rollback
     @Test
     void testUpdateMetricaSalud() throws NotFoundException {
-        Usuario user = usuarioRepository.save(Usuario.builder()
-                .nombre("Test User Update")
-                .email("test.update@example.com")
-                .password("password")
-                .fechaNacimiento(LocalDateTime.now().minusYears(25))
-                .build());
-
-        LocalDate fechaRegistro = LocalDate.now();
-        MetricaSalud initialMetrica = MetricaSalud.builder()
-                .usuario(user)
-                .fechaRegistro(fechaRegistro)
-                .calidadSueno("Good")
-                .build();
-        metricaSaludRepository.save(initialMetrica);
+        
 
         MetricaSaludRequestDTO request = MetricaSaludRequestDTO.builder()
                 .fechaRegistro(fechaRegistro)
@@ -134,14 +153,14 @@ public class MetricaSaludControllerIT {
     @Test
     void testDeleteMetricaSaludByFechaRegistro() throws NotFoundException {
     	
-    	MetricaSalud metricaSalud = metricaSaludRepository.findAll().get(0);
-    	UUID usuarioId = metricaSalud.getUsuario().getId();
-    	LocalDate fechaRegistro = metricaSalud.getFechaRegistro();
+    	
+    	UUID usuarioId = initialMetrica.getUsuario().getId();
+    	LocalDate fechaRegistro = initialMetrica.getFechaRegistro();
     	
     	ResponseEntity<?> responseEntity = metricaSaludController.deleteRegistroByDate(usuarioId, fechaRegistro);
     	
     	assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatusCode.valueOf(204));
-    	assertThat(metricaSaludRepository.findById(metricaSalud.getId()));
+    	assertThat(metricaSaludRepository.findById(initialMetrica.getId()));
     	
     }
 }

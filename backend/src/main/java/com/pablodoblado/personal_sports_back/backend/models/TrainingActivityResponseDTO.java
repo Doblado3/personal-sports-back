@@ -35,7 +35,7 @@ public class TrainingActivityResponseDTO {
 	private Double velocidadMedia;
 	private Double velocidadMaxima;
 	private String feedback;
-	private Double kiloJulios;
+	private Double calorias;
 	private Double hidratos;
 	private Double litrosAgua;
 	private Double pulsoMedio;

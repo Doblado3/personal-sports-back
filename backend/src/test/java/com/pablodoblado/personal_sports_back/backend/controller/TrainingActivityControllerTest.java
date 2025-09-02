@@ -2,7 +2,6 @@ package com.pablodoblado.personal_sports_back.backend.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;

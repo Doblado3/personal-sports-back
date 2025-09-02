@@ -2,7 +2,6 @@ package com.pablodoblado.personal_sports_back.backend.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.util.List;
@@ -12,8 +11,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -28,12 +27,12 @@ import org.testcontainers.containers.PostgreSQLContainer;
 
 
 @Testcontainers
-@SpringBootTest
 @ActiveProfiles("localpostgresql")
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@SpringBootTest
 public class TrainingActivityRepositoryIT {
 	
 	@Container
+	@ServiceConnection
 	static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17-alpine");
 	
 	@Autowired
@@ -42,40 +41,42 @@ public class TrainingActivityRepositoryIT {
 	@Autowired
 	TrainingActivityRepository trainingActivityRepository;
 	
-	LocalDateTime fecha;
-	Usuario savedUsuario;
+	private LocalDateTime fecha;
+	private Usuario savedUsuario;
+	private List<TrainingActivity> list;
+	Optional<TrainingActivity> activity;
 	
 	
 	@BeforeEach
 	void setUp() {
 		
-		Usuario usuario = Usuario.builder()
+		savedUsuario = usuarioRepository.save(Usuario.builder()
                 .nombre("Test User")
-                .email("test6375463@example.com")
+                .email("test.setup-" + UUID.randomUUID() + "@example.com")
                 .password("password")
                 .fechaNacimiento(LocalDateTime.now().minusYears(20))
-                .build();
-		
-		savedUsuario = usuarioRepository.save(usuario);		
+                .build());
+			
 		
 		fecha = LocalDateTime.of(2025, Month.APRIL, 20, 0, 0);
 		
-		TrainingActivity trainingActivity = TrainingActivity.builder()
+		TrainingActivity trainingActivity = trainingActivityRepository.save(TrainingActivity.builder()
 				.id(3L)
 				.usuario(savedUsuario)
 				.nombre("actividad de test")
 				.tipo(TipoActividad.RUNNING)
 				.fechaComienzo(fecha)
 				.pulsoMedio(142.0)
-				.build();
+				.build());
 		
-		trainingActivityRepository.save(trainingActivity);
+		list = trainingActivityRepository.findAll();
+		
+		activity = trainingActivityRepository.findAllByTipoAndFechaComienzoAndPulsoMedioBetween(TipoActividad.RUNNING, fecha, 140.0, 150.0);
 	}
 	
 	@Test
 	void testListActivities() {
 		
-		List<TrainingActivity> list = trainingActivityRepository.findAll();
 		
 		assertThat(postgres.isCreated()).isTrue();
 		assertThat(postgres.isRunning()).isTrue();
@@ -84,9 +85,7 @@ public class TrainingActivityRepositoryIT {
 	
 	@Test
 	void testFindAllByTipoAndFechaComienzoAndPulsoMedioBetween() {
-		
-		Optional<TrainingActivity> activity = trainingActivityRepository.findAllByTipoAndFechaComienzoAndPulsoMedioBetween(TipoActividad.RUNNING, fecha, 140.0, 150.0);
-		
+				
 		assertThat(activity).isNotEmpty();
 		
 		
